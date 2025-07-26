@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
+import Link from 'next/link'
 
 export default function ThankYouPage() {
   const router = useRouter();
@@ -30,9 +31,9 @@ export default function ThankYouPage() {
       <div className="flex items-center justify-center h-screen bg-white">
         <div className="bg-gray-100 p-6 rounded-lg shadow">
           <p className="text-red-600">⚠️ No booking found.</p>
-          <a href="/" className="text-blue-600 hover:underline block mt-4">
+          <Link href="/" className="text-blue-600 hover:underline block mt-4">
             ← Go to Homepage
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -103,12 +104,11 @@ export default function ThankYouPage() {
         </div>
 
         <div className="mt-8 flex gap-4 justify-center print:hidden">
-          <a
-            href="/"
+          <<Link href="/"
             className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition"
           >
             ← Go to Homepage
-          </a>
+          </Link>
           <button
             onClick={handlePrint}
             className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition"
