@@ -1,26 +1,101 @@
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+/* Light mode variables */
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Dark mode overrides */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Base body styles */
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+  background-image: linear-gradient(
+    135deg,
+    rgba(2, 0, 36, 1) 0%,
+    rgba(9, 9, 121, 1) 35%,
+    rgba(0, 212, 255, 1) 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientFlow 12s ease infinite;
+}
+
+/* Gradient Animation Keyframes */
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Input fields */
+.input {
+  @apply w-full px-3 py-2 border border-gray-300 rounded mb-2;
+}
+
+/* Buttons */
+.btn-blue {
+  @apply px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition;
+}
+
+.btn-slate {
+  @apply px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition;
+}
+
+.btn-purple {
+  @apply w-full px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded transition;
+}
+
+/* Border spin animation */
+@keyframes border-spin {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-border-spin {
+  background-size: 300% 300%;
+  animation: border-spin 5s linear infinite;
+}
+
+/* Modal animation fallback (if needed) */
+.modal-enter {
+  opacity: 0;
+  transform: translateY(-10%);
+}
+.modal-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+/* ✅ Make modal content scrollable on smaller screens */
+.modal-scroll {
+  max-height: 90vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #1f2937; /* thumb, track */
 }
