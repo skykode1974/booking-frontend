@@ -166,11 +166,24 @@ function BookingModal({ roomType, onClose }) {
                 <input type="date" name="arrival_date" onChange={handleChange} required className="input" />
                 <input type="date" name="departure_date" onChange={handleChange} required className="input" />
               </div>
-              <select multiple value={selectedRooms} onChange={handleRoomSelect} required className="input h-28">
-                {availableRooms.map((room) => (
-                  <option key={room.id} value={room.id}>Room #{room.room_number}</option>
-                ))}
-              </select>
+             <select
+  multiple
+  value={selectedRooms}
+  onChange={handleRoomSelect}
+  required
+  className="w-full bg-white text-black border border-blue-300 px-3 py-2 rounded h-28"
+>
+  {availableRooms.length === 0 ? (
+    <option disabled>Loading rooms...</option>
+  ) : (
+    availableRooms.map((room) => (
+      <option key={room.id} value={room.id}>
+        Room #{room.room_number}
+      </option>
+    ))
+  )}
+</select>
+
               <input name="full_name" placeholder="Full Name" value={form.full_name} onChange={handleChange} className="input" required />
               <input name="phone" placeholder="Phone" value={form.phone} onChange={handleChange} className="input" required />
               <input name="email" placeholder="Email" value={form.email} onChange={handleChange} className="input" />
