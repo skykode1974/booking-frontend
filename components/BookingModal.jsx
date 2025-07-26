@@ -171,17 +171,18 @@ function BookingModal({ roomType, onClose }) {
   value={selectedRooms}
   onChange={handleRoomSelect}
   required
-  className="w-full bg-white text-black border border-blue-300 px-3 py-2 rounded h-28"
+  className="w-full bg-white text-black border border-blue-500 px-3 py-2 rounded h-28"
 >
-  {availableRooms.length === 0 ? (
-    <option disabled>Loading rooms...</option>
-  ) : (
-    availableRooms.map((room) => (
-      <option key={room.id} value={room.id}>
-        Room #{room.room_number}
-      </option>
-    ))
+  {selectedRooms.length === 0 && (
+    <option disabled selected value="">
+      -- Select Room(s) --
+    </option>
   )}
+  {availableRooms.map((room) => (
+    <option key={room.id} value={room.id}>
+      Room #{room.room_number}
+    </option>
+  ))}
 </select>
 
               <input name="full_name" placeholder="Full Name" value={form.full_name} onChange={handleChange} className="input" required />
