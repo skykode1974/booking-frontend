@@ -99,3 +99,22 @@ body {
   scrollbar-width: thin;
   scrollbar-color: #4b5563 #1f2937; /* thumb, track */
 }
+.custom-datepicker {
+  background-color: #1e293b !important;
+  color: white !important;
+  border: 1px solid #3b82f6;
+}
+.custom-datepicker .react-datepicker__day--selected,
+.custom-datepicker .react-datepicker__day--keyboard-selected {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}
+.custom-datepicker .react-datepicker__day:hover {
+  background-color: #475569 !important;
+  color: white !important;
+}
+.custom-datepicker .react-datepicker__header {
+  background-color: #334155 !important;
+  border-bottom: 1px solid #3b82f6;
+}
+

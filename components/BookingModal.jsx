@@ -4,12 +4,16 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import { motion, AnimatePresence } from "framer-motion";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 function BookingModal({ roomType, onClose }) {
   const [availableRooms, setAvailableRooms] = useState([]);
   const [selectedRooms, setSelectedRooms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [arrival, setArrival] = useState(null);
+  const [departure, setDeparture] = useState(null);
 
   const [form, setForm] = useState({
     full_name: "",
@@ -135,13 +139,6 @@ function BookingModal({ roomType, onClose }) {
         className="fixed inset-0 z-50 flex items-center justify-center px-4 overflow-y-auto bg-gradient-to-br from-blue-900 via-slate-900 to-purple-900 bg-opacity-70 backdrop-blur-md"
       >
         <div className="relative w-full max-w-md bg-slate-900 text-white rounded-2xl border border-slate-700 shadow-2xl overflow-hidden mt-10 mb-10">
-          <div className="absolute inset-x-0 top-0">
-            <svg className="w-full h-16" viewBox="0 0 1440 120" fill="none">
-              <path fill="#3B82F6" fillOpacity="0.3" d="M0,80 C360,120 1080,0 1440,60 L1440,0 L0,0 Z" />
-              <path fill="#60A5FA" fillOpacity="0.4" d="M0,100 C300,40 1140,140 1440,100 L1440,0 L0,0 Z" />
-            </svg>
-          </div>
-
           {success ? (
             <div className="p-6 text-center relative z-10">
               <Checkmark />
@@ -153,34 +150,42 @@ function BookingModal({ roomType, onClose }) {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="relative z-10 p-6 space-y-4 max-h-[85vh] overflow-y-auto">
-              <h2 className="text-lg font-bold text-center text-blue-300">Book Room - {roomType.type}</h2>
+             <h2 className="text-lg font-bold text-center text-blue-300">Book Room - {roomType.type}</h2>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col">
-                  <label className="text-sm text-white mb-1">Arrival Date</label>
-                 <input
-  type="date"
-  name="arrival_date"
-  onChange={handleChange}
-  required
-  className="bg-white text-black px-3 py-2 rounded border border-blue-300 placeholder:text-gray-400"
-  placeholder="📅 Select date"
-/>
+<div className="grid grid-cols-1 gap-4">
+  <div>
+    <label className="block text-sm text-white mb-1">Arrival Date</label>
+    <DatePicker
+      selected={arrival}
+      onChange={(date) => {
+        setArrival(date);
+        setForm({ ...form, arrival_date: dayjs(date).format("YYYY-MM-DD") });
+      }}
+      placeholderText="📅 Select arrival date"
+      className="bg-slate-800 text-white px-3 py-2 rounded border border-blue-400 w-full placeholder:text-slate-300"
+      calendarClassName="custom-datepicker"
+      dateFormat="yyyy-MM-dd"
+      minDate={new Date()}
+    />
+  </div>
 
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-sm text-white mb-1">Departure Date</label>
-                 <input
-  type="date"
-  name="departure_date"
-  onChange={handleChange}
-  required
-  className="bg-white text-black px-3 py-2 rounded border border-blue-300 placeholder:text-gray-400"
-  placeholder="📅 Select date"
-/>
+  <div>
+    <label className="block text-sm text-white mb-1">Departure Date</label>
+    <DatePicker
+      selected={departure}
+      onChange={(date) => {
+        setDeparture(date);
+        setForm({ ...form, departure_date: dayjs(date).format("YYYY-MM-DD") });
+      }}
+      placeholderText="📅 Select departure date"
+      className="bg-slate-800 text-white px-3 py-2 rounded border border-blue-400 w-full placeholder:text-slate-300"
+      calendarClassName="custom-datepicker"
+      dateFormat="yyyy-MM-dd"
+      minDate={arrival || new Date()}
+    />
+  </div>
+</div>
 
-                </div>
-              </div>
 
               <div className="flex flex-col mt-2">
                 <label className="text-sm text-white mb-1">Select Available Room(s)</label>
@@ -252,7 +257,6 @@ function BookingModal({ roomType, onClose }) {
                 </div>
               )}
 
-              {/* TOTAL SECTION */}
               <div className="bg-white text-black rounded border border-green-600 p-4 mt-2 space-y-2 text-sm text-center font-semibold">
                 <p>
                   🛏 <span className="text-blue-600">{selectedRooms.length}</span> room(s) ×{" "}
@@ -280,8 +284,8 @@ function BookingModal({ roomType, onClose }) {
               </div>
             </form>
           )}
+          <ToastContainer position="top-right" theme="dark" autoClose={3000} />
         </div>
-        <ToastContainer position="top-right" theme="dark" autoClose={3000} />
       </motion.div>
     </AnimatePresence>
   );
