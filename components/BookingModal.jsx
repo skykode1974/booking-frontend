@@ -1,4 +1,3 @@
-
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import React, { useState, useEffect } from "react";
@@ -22,6 +21,13 @@ function BookingModal({ roomType, onClose }) {
     captured_image: "",
   });
 
+  const nights =
+    form.arrival_date && form.departure_date
+      ? dayjs(form.departure_date).diff(dayjs(form.arrival_date), "day")
+      : 0;
+
+  const price = roomType?.pricing?.default_price_per_night || 0;
+
   useEffect(() => {
     if (form.arrival_date && form.departure_date) {
       (async () => {
@@ -44,8 +50,6 @@ function BookingModal({ roomType, onClose }) {
 
   useEffect(() => {
     if (form.arrival_date && form.departure_date && selectedRooms.length > 0) {
-      const nights = dayjs(form.departure_date).diff(dayjs(form.arrival_date), "day");
-      const price = roomType?.pricing?.default_price_per_night || 0;
       const total = nights * price * selectedRooms.length;
       setForm((prev) => ({ ...prev, total_amount: total }));
     }
@@ -53,45 +57,33 @@ function BookingModal({ roomType, onClose }) {
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleRoomSelect = (e) => {
-    const options = e.target.options;
-    const selected = [];
-    for (let i = 0; i < options.length; i++) {
-      if (options[i].selected) selected.push(options[i].value);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!form.full_name || !form.phone || !form.arrival_date || !form.departure_date || selectedRooms.length === 0) {
+      toast.error("🚫 Please fill all required fields.");
+      return;
     }
-    setSelectedRooms(selected);
+
+    const bookingPayload = {
+      ...form,
+      room_id: selectedRooms[0] || null,
+      room_ids: selectedRooms,
+      booking_date: new Date().toISOString().slice(0, 10),
+      captured_image: form.captured_image || "",
+      payment_status: "unpaid",
+      amount_paid: 0,
+      status: "pending",
+      payment_ref: "",
+    };
+
+    setLoading(true);
+    setTimeout(() => {
+      localStorage.setItem("bookingData", JSON.stringify(bookingPayload));
+      setLoading(false);
+      window.location.href = "/pay";
+    }, 1500);
   };
-
- const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  if (!form.full_name || !form.phone || !form.arrival_date || !form.departure_date || selectedRooms.length === 0) {
-    toast.error("🚫 Please fill all required fields.");
-    return;
-  }
-
-  const bookingPayload = {
-    ...form,
-    room_id: selectedRooms[0] || null,
-    room_ids: selectedRooms,
-    booking_date: new Date().toISOString().slice(0, 10),
-    captured_image: form.captured_image || "",
-    payment_status: "unpaid",
-    amount_paid: 0,
-    status: "pending",
-    payment_ref: "",
-  };
-
-  setLoading(true);
-
-  // Save to localStorage and redirect to pay page
-  setTimeout(() => {
-    localStorage.setItem("bookingData", JSON.stringify(bookingPayload));
-    setLoading(false);
-    window.location.href = "/pay";
-  }, 1500);
-};
-
 
   const captureImage = () => {
     const input = document.createElement("input");
@@ -162,34 +154,90 @@ function BookingModal({ roomType, onClose }) {
           ) : (
             <form onSubmit={handleSubmit} className="relative z-10 p-6 space-y-4 max-h-[85vh] overflow-y-auto">
               <h2 className="text-lg font-bold text-center text-blue-300">Book Room - {roomType.type}</h2>
-              <div className="grid grid-cols-2 gap-2">
-                <input type="date" name="arrival_date" onChange={handleChange} required className="input" />
-                <input type="date" name="departure_date" onChange={handleChange} required className="input" />
-              </div>
-             <select
-  multiple
-  value={selectedRooms}
-  onChange={handleRoomSelect}
-  required
-  className="w-full bg-white text-black border border-blue-500 px-3 py-2 rounded h-28"
->
-  {selectedRooms.length === 0 && (
-    <option disabled selected value="">
-      -- Select Room(s) --
-    </option>
-  )}
-  {availableRooms.map((room) => (
-    <option key={room.id} value={room.id}>
-      Room #{room.room_number}
-    </option>
-  ))}
-</select>
 
-              <input name="full_name" placeholder="Full Name" value={form.full_name} onChange={handleChange} className="input" required />
-              <input name="phone" placeholder="Phone" value={form.phone} onChange={handleChange} className="input" required />
-              <input name="email" placeholder="Email" value={form.email} onChange={handleChange} className="input" />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col">
+                  <label className="text-sm text-white mb-1">Arrival Date</label>
+                  <input
+                    type="date"
+                    name="arrival_date"
+                    onChange={handleChange}
+                    required
+                    className="bg-white text-black px-3 py-2 rounded border border-blue-300"
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm text-white mb-1">Departure Date</label>
+                  <input
+                    type="date"
+                    name="departure_date"
+                    onChange={handleChange}
+                    required
+                    className="bg-white text-black px-3 py-2 rounded border border-blue-300"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col mt-2">
+                <label className="text-sm text-white mb-1">Select Available Room(s)</label>
+                <div className="flex flex-wrap gap-2">
+                  {availableRooms.length === 0 && (
+                    <p className="text-gray-300">Loading available rooms...</p>
+                  )}
+                  {availableRooms.map((room) => {
+                    const isSelected = selectedRooms.includes(String(room.id));
+                    return (
+                      <button
+                        key={room.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedRooms((prev) =>
+                            isSelected
+                              ? prev.filter((id) => id !== String(room.id))
+                              : [...prev, String(room.id)]
+                          );
+                        }}
+                        className={`px-4 py-2 rounded border ${
+                          isSelected
+                            ? "bg-green-500 text-white border-green-600"
+                            : "bg-white text-black border-blue-300"
+                        }`}
+                      >
+                        Room #{room.room_number}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <input
+                name="full_name"
+                placeholder="Full Name"
+                value={form.full_name}
+                onChange={handleChange}
+                className="input"
+                required
+              />
+              <input
+                name="phone"
+                placeholder="Phone"
+                value={form.phone}
+                onChange={handleChange}
+                className="input"
+                required
+              />
+              <input
+                name="email"
+                placeholder="Email"
+                value={form.email}
+                onChange={handleChange}
+                className="input"
+              />
+
               {!form.captured_image && (
-                <button type="button" onClick={captureImage} className="btn-purple">📷 Capture Face (Optional)</button>
+                <button type="button" onClick={captureImage} className="btn-purple">
+                  📷 Capture Face (Optional)
+                </button>
               )}
               {form.captured_image && (
                 <div>
@@ -199,10 +247,29 @@ function BookingModal({ roomType, onClose }) {
                   </button>
                 </div>
               )}
-              <input value={form.total_amount} readOnly className="bg-black border border-green-600 p-2 w-full rounded text-green-400 text-center font-bold" />
-              {loading && <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-pulse rounded"></div>}
+
+              {/* TOTAL SECTION */}
+              <div className="bg-white text-black rounded border border-green-600 p-4 mt-2 space-y-2 text-sm text-center font-semibold">
+                <p>
+                  🛏 <span className="text-blue-600">{selectedRooms.length}</span> room(s) ×{" "}
+                  <span className="text-blue-600">{nights}</span> night(s)
+                </p>
+                <p>
+                  💵 Per night per room: ₦<span className="text-blue-600">{Number(price).toLocaleString()}</span>
+                </p>
+                <hr className="my-1 border-green-500" />
+                <p className="text-lg text-green-700 font-bold">
+                  💰 Total: ₦{Number(form.total_amount || 0).toLocaleString()}
+                </p>
+              </div>
+
+              {loading && (
+                <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-pulse rounded"></div>
+              )}
               <div className="flex justify-between mt-3">
-                <button type="button" onClick={onClose} className="btn-slate">Cancel</button>
+                <button type="button" onClick={onClose} className="btn-slate">
+                  Cancel
+                </button>
                 <button type="submit" disabled={loading} className="btn-blue">
                   {loading ? "Booking..." : "Confirm Booking"}
                 </button>
