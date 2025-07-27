@@ -158,23 +158,27 @@ function BookingModal({ roomType, onClose }) {
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex flex-col">
                   <label className="text-sm text-white mb-1">Arrival Date</label>
-                  <input
-                    type="date"
-                    name="arrival_date"
-                    onChange={handleChange}
-                    required
-                    className="bg-white text-black px-3 py-2 rounded border border-blue-300"
-                  />
+                 <input
+  type="date"
+  name="arrival_date"
+  onChange={handleChange}
+  required
+  className="bg-white text-black px-3 py-2 rounded border border-blue-300 placeholder:text-gray-400"
+  placeholder="📅 Select date"
+/>
+
                 </div>
                 <div className="flex flex-col">
                   <label className="text-sm text-white mb-1">Departure Date</label>
-                  <input
-                    type="date"
-                    name="departure_date"
-                    onChange={handleChange}
-                    required
-                    className="bg-white text-black px-3 py-2 rounded border border-blue-300"
-                  />
+                 <input
+  type="date"
+  name="departure_date"
+  onChange={handleChange}
+  required
+  className="bg-white text-black px-3 py-2 rounded border border-blue-300 placeholder:text-gray-400"
+  placeholder="📅 Select date"
+/>
+
                 </div>
               </div>
 
