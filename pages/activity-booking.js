@@ -1,5 +1,5 @@
 import Flatpickr from "react-flatpickr";
-import "flatpickr/dist/themes/material_green.css"; // You can use other themes too
+import "flatpickr/dist/themes/material_dark.css"; // You can use other themes too
 import { useState, useEffect } from "react";
 
 export default function ActivityBookingPage() {
