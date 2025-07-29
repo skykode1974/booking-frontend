@@ -1,3 +1,5 @@
+import Flatpickr from "react-flatpickr";
+import "flatpickr/dist/themes/material_green.css"; // You can use other themes too
 import { useState, useEffect } from "react";
 
 export default function ActivityBookingPage() {
@@ -209,13 +211,18 @@ const handleCheckbox = (activity) => {
             placeholder="Phone"
             className="bg-white/10 p-2 rounded border border-gray-300 text-white placeholder-gray-400"
           />
-          <input
-            type="date"
-            name="booking_date"
-            value={form.booking_date}
-            onChange={handleInput}
-            className="bg-white/10 p-2 rounded border border-gray-300 text-white"
-          />
+        <Flatpickr
+  options={{
+    dateFormat: "Y-m-d",
+    minDate: "today"
+  }}
+  value={form.booking_date}
+  onChange={([date]) =>
+    setForm({ ...form, booking_date: date.toISOString().split("T")[0] })
+  }
+  className="bg-white/10 p-2 rounded border border-gray-300 text-white w-full"
+/>
+
         </div>
 
         {/* Activities */}
