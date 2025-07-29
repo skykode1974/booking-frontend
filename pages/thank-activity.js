@@ -17,7 +17,7 @@ function FullScreenLoader({ message = "Please wait..." }) {
   );
 }
 
-export default function ThankYouPage() {
+export default function ThankActivityPage() {
   const router = useRouter();
   const [booking, setBooking] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,7 +73,7 @@ export default function ThankYouPage() {
         </h1>
 
         <p className="mb-3 text-gray-700 print:text-black text-center">
-          Dear <strong>{booking.full_name}</strong>, your booking has been successfully confirmed and paid.
+          Dear <strong>{booking.full_name}</strong>, your activity booking has been successfully confirmed and paid.
         </p>
 
         {booking.email && (
@@ -82,51 +82,42 @@ export default function ThankYouPage() {
           </p>
         )}
 
-        {/* Room Booking View */}
-        {booking.bookings ? (
-          <div className="overflow-x-auto mb-6">
-            <table className="w-full border border-blue-200 text-sm md:text-base rounded overflow-hidden print:text-sm">
-              <thead className="bg-blue-500 text-white print:bg-gray-300 print:text-black">
-                <tr>
-                  <th className="border border-blue-300 px-3 py-2">Room No</th>
-                  <th className="border border-blue-300 px-3 py-2">Room Type</th>
-                  <th className="border border-blue-300 px-3 py-2">Arrival</th>
-                  <th className="border border-blue-300 px-3 py-2">Departure</th>
-                  <th className="border border-blue-300 px-3 py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {booking.bookings?.map((item, index) => (
-                  <tr key={index} className="bg-white hover:bg-blue-50 print:hover:bg-white">
-                    <td className="border border-blue-200 px-3 py-2">{item.room_number}</td>
-                    <td className="border border-blue-200 px-3 py-2">{item.room_type}</td>
-                    <td className="border border-blue-200 px-3 py-2">{booking.arrival_date}</td>
-                    <td className="border border-blue-200 px-3 py-2">{booking.departure_date}</td>
-                    <td className="border border-blue-200 px-3 py-2 capitalize">{item.status || "Confirmed"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          // Activity Booking View
-          <div className="text-center mt-6">
-            <p className="mb-1 text-gray-800 print:text-black">
-              <strong>Date:</strong> {booking.booking_date}
+        {/* Activity Booking View */}
+        <div className="text-center mt-6">
+          <p className="mb-1 text-gray-800 print:text-black">
+            <strong>Date:</strong> {booking.booking_date}
+          </p>
+
+          <p className="font-semibold mb-2">Activities Booked:</p>
+          <ul className="list-disc list-inside mb-4 text-left max-w-sm mx-auto print:text-black">
+            {booking.activities?.map((a, i) => (
+              <li key={i} className="capitalize">
+                {a.activity_type} – ₦{a.price.toLocaleString()}
+              </li>
+            ))}
+          </ul>
+
+          {/* Gym Duration Summary */}
+          {booking.activities?.some((a) =>
+            a.activity_type.toLowerCase().includes("gym")
+          ) && (
+            <p className="italic text-sm mt-2">
+              🏋️ Gym Duration: <strong>{booking.gym_duration}</strong>{" "}
+              ({booking.gym_duration === "weekly"
+                ? "7 days"
+                : booking.gym_duration === "monthly"
+                ? "30 days"
+                : "1 day"})
             </p>
-            <p className="font-semibold mb-2">Activities Booked:</p>
-            <ul className="list-disc list-inside mb-4 text-left max-w-sm mx-auto print:text-black">
-              {booking.activities?.map((a, i) => (
-                <li key={i} className="capitalize">
-                  {a.activity_type} – ₦{a.price.toLocaleString()}
-                </li>
-              ))}
-            </ul>
-            <p className="text-green-700 font-bold">
-              💰 Total Paid: ₦{booking.activities?.reduce((sum, a) => sum + a.price, 0).toLocaleString()}
-            </p>
-          </div>
-        )}
+          )}
+
+          <p className="text-green-700 font-bold mt-2">
+            💰 Total Paid: ₦
+            {booking.activities
+              ?.reduce((sum, a) => sum + parseInt(a.price || 0), 0)
+              .toLocaleString()}
+          </p>
+        </div>
 
         <div className="space-y-2 text-gray-800 print:text-black text-center mt-4">
           <p>

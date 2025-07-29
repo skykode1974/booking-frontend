@@ -117,4 +117,10 @@ body {
   background-color: #334155 !important;
   border-bottom: 1px solid #3b82f6;
 }
+/* Add this to your globals.css or use Tailwind classes */
+.loader {
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-left-color: #00c6ff;
+  border-radius: 50%;
+}
 
