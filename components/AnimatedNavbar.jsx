@@ -6,7 +6,7 @@ export default function AnimatedNavbar() {
 
   const bookings = [
     { label: "Room Booking", href: "/room-booking" },
-    { label: "Hall Booking", href: "/hall-booking" },
+    
     { label: "Activity Booking", href: "/activity-booking" },
   ];
 

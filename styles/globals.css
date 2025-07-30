@@ -100,23 +100,45 @@ body {
   scrollbar-color: #4b5563 #1f2937; /* thumb, track */
 }
 .custom-datepicker {
-  background-color: #1e293b !important;
-  color: white !important;
-  border: 1px solid #3b82f6;
+  background-color: #1e293b !important; /* slate-800 */
+  color: #f8fafc !important; /* slate-100 */
+  border: 1px solid #3b82f6 !important; /* blue-500 */
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
+  font-size: 0.875rem; /* text-sm */
 }
+
+.custom-datepicker .react-datepicker__day {
+  color: #f8fafc; /* white-ish */
+}
+
 .custom-datepicker .react-datepicker__day--selected,
 .custom-datepicker .react-datepicker__day--keyboard-selected {
-  background-color: #3b82f6 !important;
+  background-color: #3b82f6 !important; /* blue-500 */
   color: white !important;
+  border-radius: 0.25rem;
 }
+
+.custom-datepicker .react-datepicker__day--disabled {
+  color: #64748b !important; /* slate-400 */
+}
+
 .custom-datepicker .react-datepicker__day:hover {
-  background-color: #475569 !important;
+  background-color: #475569 !important; /* slate-600 */
   color: white !important;
 }
+
 .custom-datepicker .react-datepicker__header {
-  background-color: #334155 !important;
+  background-color: #0f172a !important; /* slate-900 */
   border-bottom: 1px solid #3b82f6;
 }
+
+.custom-datepicker .react-datepicker__current-month,
+.custom-datepicker .react-datepicker__day-name {
+  color: #facc15 !important; /* yellow-400 */
+}
+
 /* Add this to your globals.css or use Tailwind classes */
 .loader {
   border: 4px solid rgba(255, 255, 255, 0.2);
@@ -124,3 +146,61 @@ body {
   border-radius: 50%;
 }
 
+/* Make sure this is applied globally */
+.flatpickr-calendar {
+  background-color: #1f2937 !important; /* Tailwind gray-800 */
+  color: white !important;
+  border: 1px solid #4b5563; /* Tailwind gray-600 */
+}
+
+.flatpickr-calendar .flatpickr-day {
+  color: white;
+}
+
+.flatpickr-calendar .flatpickr-day.today {
+  background-color: #2563eb !important; /* Tailwind blue-600 */
+  color: white;
+}
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  animation: gradientFlow 15s ease infinite;
+}
+
+@keyframes rainbowFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.rainbow-gradient {
+  background: linear-gradient(
+    -45deg,
+    #ff0000,
+    #ff9900,
+    #ffff00,
+    #00ff00,
+    #00ccff,
+    #0000ff,
+    #9900ff,
+    #ff00ff
+  );
+  background-size: 400% 400%;
+  animation: rainbowFlow 20s ease infinite;
+}

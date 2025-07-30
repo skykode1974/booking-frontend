@@ -1,6 +1,7 @@
-import Flatpickr from "react-flatpickr";
-import "flatpickr/dist/themes/material_dark.css"; // You can use other themes too
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { useState, useEffect } from "react";
+import ParticlesBackground from "@/components/ParticlesBackground";
 
 export default function ActivityBookingPage() {
   const [form, setForm] = useState({
@@ -21,36 +22,35 @@ export default function ActivityBookingPage() {
     }).toLowerCase();
   };
 
-  useEffect(() => {
-    if (!form.booking_date) {
-      setActivityOptions([]);
-      return;
-    }
+useEffect(() => {
+  if (!form.booking_date) {
+    setActivityOptions([]);
+    return;
+  }
 
-    fetch(`https://hotel.skykode.com.ng/api/hms/activities/${form.booking_date}`)
-      .then((res) => res.json())
-      .then((data) => {
-        const dayKey = getDayKey(form.booking_date);
+  fetch(`https://hotel.skykode.com.ng/api/hms/activities/${form.booking_date}`)
+    .then((res) => res.json())
+    .then((data) => {
+      const dayKey = getDayKey(form.booking_date);
+      const filtered = data.filter((act) => {
+        const activityDay = (act.day || "").toLowerCase();
+        const customDays = (act.custom_days || "")
+          .toLowerCase()
+          .split(",")
+          .map((d) => d.trim());
 
-        const filtered = data.filter((act) => {
-          const activityDay = (act.day || "").toLowerCase();
-          const customDays = (act.custom_days || "")
-            .toLowerCase()
-            .split(",")
-            .map((d) => d.trim());
-
-          if (activityDay === "everyday") return true;
-          if (activityDay === "custom") return customDays.includes(dayKey);
-          return activityDay.startsWith(dayKey);
-        });
-
-        setActivityOptions(filtered);
-      })
-      .catch((err) => {
-        console.error("Failed to load activities", err);
-        alert("Could not load activity list.");
+        if (activityDay === "everyday") return true;
+        if (activityDay === "custom") return customDays.includes(dayKey);
+        return activityDay.startsWith(dayKey);
       });
-  }, [form.booking_date]);
+
+      setActivityOptions(filtered);
+    })
+    .catch((err) => {
+      console.error("Failed to load activities", err);
+      alert("Could not load activity list.");
+    });
+}, [form.booking_date]);
 
   const isGym = (activityName) => activityName.toLowerCase() === "gym";
   const isGymSelected = form.activities.some((a) => isGym(a.activity_type));
@@ -183,10 +183,13 @@ const handleCheckbox = (activity) => {
   };
 
 
-  return (
-    <div className="min-h-screen bg-gray-900 text-white px-6 py-12">
-      <div className="max-w-2xl mx-auto bg-white/10 p-6 rounded-lg shadow-lg">
-        <h2 className="text-xl font-bold mb-4 text-center">🎫 Activity Booking</h2>
+  
+return (
+  <div className="relative min-h-screen text-white px-6 py-12 bg-black/30 backdrop-blur-md">
+    <ParticlesBackground />
+
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-slate-900 to-purple-900 text-white px-6 py-12">
+      <h2 className="text-xl font-bold mb-4 text-center">🎫 Activity Booking</h2>
 
         {/* Personal Info */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -211,17 +214,18 @@ const handleCheckbox = (activity) => {
             placeholder="Phone"
             className="bg-white/10 p-2 rounded border border-gray-300 text-white placeholder-gray-400"
           />
-        <Flatpickr
-  options={{
-    dateFormat: "Y-m-d",
-    minDate: "today"
-  }}
-  value={form.booking_date}
-  onChange={([date]) =>
+    <DatePicker
+  selected={form.booking_date ? new Date(form.booking_date) : null}
+  onChange={(date) =>
     setForm({ ...form, booking_date: date.toISOString().split("T")[0] })
   }
-  className="bg-white/10 p-2 rounded border border-gray-300 text-white w-full"
+  dateFormat="yyyy-MM-dd"
+  minDate={new Date()}
+  placeholderText="📅 Select a date"
+  className="bg-slate-800 text-white px-3 py-2 rounded border border-blue-400 w-full"
+  calendarClassName="custom-datepicker"
 />
+
 
         </div>
 

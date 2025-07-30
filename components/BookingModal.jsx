@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import { motion, AnimatePresence } from "framer-motion";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import BottomWave from "@/components/BottomWave"; // Adjust path if needed
 
 function BookingModal({ roomType, onClose }) {
   const [availableRooms, setAvailableRooms] = useState([]);
@@ -138,7 +139,8 @@ function BookingModal({ roomType, onClose }) {
         transition={{ duration: 0.5 }}
         className="fixed inset-0 z-50 flex items-center justify-center px-4 overflow-y-auto bg-gradient-to-br from-blue-900 via-slate-900 to-purple-900 bg-opacity-70 backdrop-blur-md"
       >
-        <div className="relative w-full max-w-md bg-slate-900 text-white rounded-2xl border border-slate-700 shadow-2xl overflow-hidden mt-10 mb-10">
+        <div className="relative w-full max-w-md bg-slate-900 text-white rounded-2xl border border-slate-700 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+
           {success ? (
             <div className="p-6 text-center relative z-10">
               <Checkmark />
@@ -149,7 +151,8 @@ function BookingModal({ roomType, onClose }) {
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="relative z-10 p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto z-10 p-6 space-y-4">
+
              <h2 className="text-lg font-bold text-center text-blue-300">Book Room - {roomType.type}</h2>
 
 <div className="grid grid-cols-1 gap-4">
@@ -189,34 +192,60 @@ function BookingModal({ roomType, onClose }) {
 
               <div className="flex flex-col mt-2">
                 <label className="text-sm text-white mb-1">Select Available Room(s)</label>
-                <div className="flex flex-wrap gap-2">
-                  {availableRooms.length === 0 && (
-                    <p className="text-gray-300">Loading available rooms...</p>
-                  )}
-                  {availableRooms.map((room) => {
-                    const isSelected = selectedRooms.includes(String(room.id));
-                    return (
-                      <button
-                        key={room.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedRooms((prev) =>
-                            isSelected
-                              ? prev.filter((id) => id !== String(room.id))
-                              : [...prev, String(room.id)]
-                          );
-                        }}
-                        className={`px-4 py-2 rounded border ${
-                          isSelected
-                            ? "bg-green-500 text-white border-green-600"
-                            : "bg-white text-black border-blue-300"
-                        }`}
-                      >
-                        Room #{room.room_number}
-                      </button>
-                    );
-                  })}
-                </div>
+               
+
+
+<div className="flex flex-wrap gap-3">
+  {availableRooms.length === 0 && (
+    <p className="text-gray-300">Loading available rooms...</p>
+  )}
+
+  {availableRooms.map((room) => {
+    const isSelected = selectedRooms.includes(String(room.id));
+    return (
+      <div
+        key={room.id}
+        onClick={() => {
+          setSelectedRooms((prev) =>
+            isSelected
+              ? prev.filter((id) => id !== String(room.id))
+              : [...prev, String(room.id)]
+          );
+        }}
+        className={`cursor-pointer w-[48%] p-4 rounded-xl border-2 transition duration-200
+          ${
+            isSelected
+              ? "bg-gradient-to-r from-blue-600 to-blue-800 border-blue-400 shadow-md"
+              : "bg-slate-800 border-slate-600 hover:border-blue-400 hover:bg-slate-700"
+          }`}
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-2xl">🛏️</span>
+          <div>
+            <h4 className="font-semibold text-white">Room #{room.room_number}</h4>
+            <p className="text-sm text-gray-400">Floor: {room.floor || "N/A"}</p>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center mt-2">
+          <p className="text-sm font-bold text-green-400">
+            ₦{Number(price).toLocaleString()}
+          </p>
+          <input
+            type="checkbox"
+            readOnly
+            checked={isSelected}
+            className="accent-blue-500 w-4 h-4"
+          />
+        </div>
+      </div>
+    );
+  })}
+</div>
+
+
+
+
               </div>
 
               <input
@@ -287,6 +316,15 @@ function BookingModal({ roomType, onClose }) {
           <ToastContainer position="top-right" theme="dark" autoClose={3000} />
         </div>
       </motion.div>
+
+
+{/* 👇 Bottom Wave & Footer */}
+<div className="z-0">
+  <BottomWave />
+  <div className="text-center text-xs text-slate-400 pb-3 -mt-6">Designed by Skykode</div>
+</div>
+
+
     </AnimatePresence>
   );
 }
