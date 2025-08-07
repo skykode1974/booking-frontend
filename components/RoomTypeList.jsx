@@ -40,10 +40,11 @@ function RoomTypeList() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 py-12 px-4">
-      <h1 className="text-3xl font-bold text-center text-white mb-10">
-        Available Room Types
-      </h1>
+    <div
+      className="min-h-screen py-12 px-4 transition-all"
+      style={{ backgroundColor: "var(--background)", color: "var(--foreground)" }}
+    >
+      <h1 className="text-3xl font-bold text-center mb-10">Available Room Types</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
         {roomTypes.map((room, index) => (
@@ -55,11 +56,18 @@ function RoomTypeList() {
             transition={{ duration: 0.6, delay: index * 0.1 }}
             viewport={{ once: true }}
           >
-            {/* Gradient glow background */}
+            {/* Gradient background */}
             <div className="absolute -inset-1 rounded-2xl bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-pink-500 via-purple-600 to-indigo-500 opacity-30 blur-md group-hover:opacity-70 transition-all duration-300 z-0"></div>
 
             {/* Main card */}
-            <div className="relative z-10 bg-slate-800 border border-slate-700 text-white rounded-2xl overflow-hidden shadow-xl transition-transform hover:scale-[1.02]">
+            <div
+              className="relative z-10 border rounded-2xl overflow-hidden shadow-xl transition-transform hover:scale-[1.02]"
+              style={{
+                backgroundColor: "var(--foreground)",
+                color: "var(--background)",
+                borderColor: "var(--background)"
+              }}
+            >
               <div className="relative h-48 w-full bg-gray-700">
                 {room.media && room.media.length > 0 ? (
                   <img
@@ -75,18 +83,17 @@ function RoomTypeList() {
               </div>
 
               <div className="p-5">
-                <h2 className="text-xl font-semibold text-blue-400 mb-1">
+                <h2 className="text-xl font-semibold text-blue-500 mb-1">
                   {room.type}
                 </h2>
 
                 <div
-                  className="text-gray-300 text-sm mb-2 line-clamp-2"
+                  className="text-sm mb-2 line-clamp-2"
                   dangerouslySetInnerHTML={{ __html: room.description }}
                 ></div>
 
-                <ul className="text-sm text-gray-300 mb-4 space-y-1">
-                  <li>
-                    <strong>Price:</strong> ₦
+                <ul className="text-sm mb-4 space-y-1">
+                  <li><strong>Price:</strong> ₦
                     {room?.pricing?.default_price_per_night
                       ? Number(room.pricing.default_price_per_night).toLocaleString("en-NG", {
                           minimumFractionDigits: 2,
@@ -94,15 +101,11 @@ function RoomTypeList() {
                         })
                       : "N/A"}
                   </li>
-                  <li>
-                    <strong>Max Adults:</strong> {room.no_of_adult}
-                  </li>
-                  <li>
-                    <strong>Max Children:</strong> {room.no_of_child}
-                  </li>
+                  <li><strong>Max Adults:</strong> {room.no_of_adult}</li>
+                  <li><strong>Max Children:</strong> {room.no_of_child}</li>
                 </ul>
 
-                {/* Toggle Button */}
+                {/* Toggle Amenities */}
                 <button
                   onClick={() => toggleCardDetails(room.id)}
                   className="text-sm text-blue-400 underline hover:text-blue-300 mb-2"
@@ -112,13 +115,13 @@ function RoomTypeList() {
                     : "Show Amenities & Extras"}
                 </button>
 
-                {/* Dropdown Section */}
+                {/* Amenities & Extras */}
                 {expandedCards[room.id] && (
-                  <div className="text-sm text-gray-300 space-y-3">
+                  <div className="text-sm space-y-3">
                     {/* Amenities */}
                     {room.amenities && (
                       <div>
-                        <strong className="text-white">Amenities:</strong>
+                        <strong>Amenities:</strong>
                         <ul className="list-disc pl-5 mt-1">
                           {JSON.parse(room.amenities).map((id, i) => (
                             <li key={i}>{amenityMap[id] || `Amenity #${id}`}</li>
@@ -130,12 +133,12 @@ function RoomTypeList() {
                     {/* Extras */}
                     {room.extras && room.extras.length > 0 && (
                       <div>
-                        <strong className="text-white">Extras:</strong>
+                        <strong>Extras:</strong>
                         <ul className="list-disc pl-5 mt-1">
                           {room.extras.map((extra) => (
                             <li key={extra.id}>
-                              {extra.name} - ₦{Number(extra.price).toLocaleString()}{" "}
-                              <span className="text-gray-400 text-xs">
+                              {extra.name} - ₦{Number(extra.price).toLocaleString()}
+                              <span className="text-xs text-gray-500 ml-1">
                                 ({extra.price_per})
                               </span>
                             </li>
