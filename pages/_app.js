@@ -1,20 +1,40 @@
-import { useEffect } from "react";
-import "@/styles/globals.css"; // Your custom global styles
-import "flatpickr/dist/themes/material_green.css"; // ✅ Flatpickr theme (must be here in Next.js)
+// pages/_app.js
+import { useEffect, useState } from "react";
+import "@/styles/globals.css";
+import "flatpickr/dist/themes/material_green.css";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 
 export default function App({ Component, pageProps }) {
-  useEffect(() => {
-    // ✅ Always enable dark mode
-    document.documentElement.classList.add("dark");
+  const [theme, setTheme] = useState("light");
 
-    // Optional: If you ever want to use system preference instead:
-    // const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    // if (prefersDark) {
-    //   document.documentElement.classList.add("dark");
-    // } else {
-    //   document.documentElement.classList.remove("dark");
-    // }
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
+    setTheme(initialTheme);
+
+    document.documentElement.classList.toggle("dark", initialTheme === "dark");
   }, []);
 
-  return <Component {...pageProps} />;
+  const toggleTheme = () => {
+    const newTheme = theme === "dark" ? "light" : "dark";
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+  };
+
+  return (
+    <>
+      <button
+        onClick={toggleTheme}
+        className="fixed top-4 right-4 z-50 px-4 py-2 bg-blue-600 text-white rounded shadow"
+      >
+        {theme === "dark" ? "☀️ Light Mode" : "🌙 Dark Mode"}
+      </button>
+      <Component {...pageProps} />
+    </>
+  );
 }

@@ -1,10 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: 'class', // ✅ Enables class-based dark mode
+  darkMode: 'class', // ✅ Enables class-based dark mode toggle
   content: [
     "./pages/**/*.{js,ts,jsx,tsx}",
     "./components/**/*.{js,ts,jsx,tsx}",
-    "./app/**/*.{js,ts,jsx,tsx}", // optional if using App Router
+    "./app/**/*.{js,ts,jsx,tsx}", // Optional for App Router
   ],
   theme: {
     extend: {
@@ -33,6 +33,6 @@ module.exports = {
   },
   plugins: [
     require('@tailwindcss/line-clamp'),
-    // add other plugins if needed
+    // Add more Tailwind plugins here if needed
   ],
-};
+}

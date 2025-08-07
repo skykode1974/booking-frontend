@@ -6,13 +6,14 @@
 /* Light mode variables */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0c1a2b;
+  --muted: #666666;
 }
 
-/* Dark mode overrides */
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #0c1a2b;
+  --foreground: #ffffff;
+  --muted: #cccccc;
 }
 
 /* Base body styles */
@@ -22,6 +23,10 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
   min-height: 100vh;
+}
+
+/* Light Mode Background Animation */
+body.light {
   background-image: linear-gradient(
     135deg,
     rgba(2, 0, 36, 1) 0%,
@@ -30,6 +35,11 @@ body {
   );
   background-size: 400% 400%;
   animation: gradientFlow 12s ease infinite;
+}
+
+/* Dark mode: clean background */
+body.dark {
+  background-image: none;
 }
 
 /* Gradient Animation Keyframes */
@@ -92,65 +102,67 @@ body {
   transition: opacity 300ms ease, transform 300ms ease;
 }
 
-/* ✅ Make modal content scrollable on smaller screens */
+/* Scrollable modal content */
 .modal-scroll {
   max-height: 90vh;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: #4b5563 #1f2937; /* thumb, track */
+  scrollbar-color: #4b5563 #1f2937;
 }
+
+/* Datepicker style override */
 .custom-datepicker {
-  background-color: #1e293b !important; /* slate-800 */
-  color: #f8fafc !important; /* slate-100 */
-  border: 1px solid #3b82f6 !important; /* blue-500 */
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid #3b82f6 !important;
   border-radius: 0.5rem;
   padding: 0.5rem;
   box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
-  font-size: 0.875rem; /* text-sm */
+  font-size: 0.875rem;
 }
 
 .custom-datepicker .react-datepicker__day {
-  color: #f8fafc; /* white-ish */
+  color: #f8fafc;
 }
 
 .custom-datepicker .react-datepicker__day--selected,
 .custom-datepicker .react-datepicker__day--keyboard-selected {
-  background-color: #3b82f6 !important; /* blue-500 */
+  background-color: #3b82f6 !important;
   color: white !important;
   border-radius: 0.25rem;
 }
 
 .custom-datepicker .react-datepicker__day--disabled {
-  color: #64748b !important; /* slate-400 */
+  color: #64748b !important;
 }
 
 .custom-datepicker .react-datepicker__day:hover {
-  background-color: #475569 !important; /* slate-600 */
+  background-color: #475569 !important;
   color: white !important;
 }
 
 .custom-datepicker .react-datepicker__header {
-  background-color: #0f172a !important; /* slate-900 */
+  background-color: #0f172a !important;
   border-bottom: 1px solid #3b82f6;
 }
 
 .custom-datepicker .react-datepicker__current-month,
 .custom-datepicker .react-datepicker__day-name {
-  color: #facc15 !important; /* yellow-400 */
+  color: #facc15 !important;
 }
 
-/* Add this to your globals.css or use Tailwind classes */
+/* Loader Spinner */
 .loader {
   border: 4px solid rgba(255, 255, 255, 0.2);
   border-left-color: #00c6ff;
   border-radius: 50%;
 }
 
-/* Make sure this is applied globally */
+/* Flatpickr dark override */
 .flatpickr-calendar {
-  background-color: #1f2937 !important; /* Tailwind gray-800 */
+  background-color: #1f2937 !important;
   color: white !important;
-  border: 1px solid #4b5563; /* Tailwind gray-600 */
+  border: 1px solid #4b5563;
 }
 
 .flatpickr-calendar .flatpickr-day {
@@ -158,9 +170,11 @@ body {
 }
 
 .flatpickr-calendar .flatpickr-day.today {
-  background-color: #2563eb !important; /* Tailwind blue-600 */
+  background-color: #2563eb !important;
   color: white;
 }
+
+/* Gradient & rainbow animations */
 @keyframes gradientFlow {
   0% {
     background-position: 0% 50%;

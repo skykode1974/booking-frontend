@@ -1,12 +1,52 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { HiMenu, HiX } from "react-icons/hi";
+import { FaSun, FaMoon } from "react-icons/fa";
 
 export default function AnimatedNavbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  // Apply theme on mount
+useEffect(() => {
+  const savedTheme = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+  if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
+    document.documentElement.classList.add("dark");
+    document.body.classList.add("dark");
+    document.body.classList.remove("light");
+    setIsDark(true);
+  } else {
+    document.documentElement.classList.remove("dark");
+    document.body.classList.remove("dark");
+    document.body.classList.add("light");
+    setIsDark(false);
+  }
+}, []);
+
+const toggleDarkMode = () => {
+  const html = document.documentElement;
+  const body = document.body;
+  const newTheme = !isDark;
+
+  if (newTheme) {
+    html.classList.add("dark");
+    body.classList.add("dark");
+    body.classList.remove("light");
+    localStorage.setItem("theme", "dark");
+  } else {
+    html.classList.remove("dark");
+    body.classList.remove("dark");
+    body.classList.add("light");
+    localStorage.setItem("theme", "light");
+  }
+
+  setIsDark(newTheme);
+};
+
 
   const bookings = [
     { label: "Room Booking", href: "/room-booking" },
-    
     { label: "Activity Booking", href: "/activity-booking" },
   ];
 
@@ -16,22 +56,37 @@ export default function AnimatedNavbar() {
     { label: "Bar", href: "/bar" },
   ];
 
+  const pages = [
+    { label: "Home", href: "/" },
+    { label: "Features", href: "#features" },
+    { label: "Rooms", href: "#rooms" },
+    { label: "Gallery", href: "#gallery" },
+    { label: "Contact", href: "/contact" },
+  ];
+
   return (
-    <nav className="fixed top-0 left-0 w-full z-50 backdrop-blur-md bg-white/5 text-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
+    <nav className="fixed top-0 left-0 w-full z-50 backdrop-blur-md bg-white/5 text-white shadow-sm border-b border-white/10">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        {/* Logo */}
         <h1 className="text-lg md:text-xl font-bold text-white">Awrab Suite Hotel</h1>
 
         {/* Desktop Menu */}
-        <ul className="hidden md:flex space-x-6 text-sm font-medium">
+        <ul className="hidden md:flex items-center space-x-6 text-sm font-medium">
+          {pages.map((item, idx) => (
+            <li key={idx}>
+              <a href={item.href} className="hover:text-blue-400 transition">
+                {item.label}
+              </a>
+            </li>
+          ))}
+
+          {/* Bookings Dropdown */}
           <li className="group relative">
             <span className="cursor-pointer">Bookings</span>
             <ul className="absolute hidden group-hover:block top-full left-0 bg-white text-black rounded shadow-md mt-2 min-w-[180px]">
               {bookings.map((item, idx) => (
                 <li key={idx}>
-                  <a
-                    href={item.href}
-                    className="block px-4 py-2 hover:bg-blue-100"
-                  >
+                  <a href={item.href} className="block px-4 py-2 hover:bg-blue-100">
                     {item.label}
                   </a>
                 </li>
@@ -39,20 +94,29 @@ export default function AnimatedNavbar() {
             </ul>
           </li>
 
+          {/* Entertainment Dropdown */}
           <li className="group relative">
-            <span className="cursor-pointer">Dining & Entertainment</span>
+            <span className="cursor-pointer">Dining</span>
             <ul className="absolute hidden group-hover:block top-full left-0 bg-white text-black rounded shadow-md mt-2 min-w-[180px]">
               {entertainment.map((item, idx) => (
                 <li key={idx}>
-                  <a
-                    href={item.href}
-                    className="block px-4 py-2 hover:bg-blue-100"
-                  >
+                  <a href={item.href} className="block px-4 py-2 hover:bg-blue-100">
                     {item.label}
                   </a>
                 </li>
               ))}
             </ul>
+          </li>
+
+          {/* Theme Toggle Button */}
+          <li>
+            <button
+              onClick={toggleDarkMode}
+              title="Toggle Theme"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-full"
+            >
+              {isDark ? <FaSun size={16} /> : <FaMoon size={16} />}
+            </button>
           </li>
         </ul>
 
@@ -64,22 +128,40 @@ export default function AnimatedNavbar() {
         </div>
       </div>
 
-      {/* Mobile Dropdown */}
+      {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden bg-black bg-opacity-80 backdrop-blur-md text-white px-4 py-4 space-y-4">
+        <div className="md:hidden bg-black bg-opacity-90 text-white px-6 py-6 space-y-6">
+          {/* Pages */}
           <div>
-            <h2 className="text-sm font-bold mb-1">Bookings</h2>
-            {bookings.map((item, idx) => (
+            <h2 className="text-sm font-bold mb-1">Navigation</h2>
+            {pages.map((item, idx) => (
               <a
                 key={idx}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
-                className="block text-sm py-1 border-b border-white/10 hover:text-blue-300"
+                className="block py-1 border-b border-white/10 hover:text-blue-300"
               >
                 {item.label}
               </a>
             ))}
           </div>
+
+          {/* Bookings */}
+          <div>
+            <h2 className="text-sm font-bold mt-4 mb-1">Bookings</h2>
+            {bookings.map((item, idx) => (
+              <a
+                key={idx}
+                href={item.href}
+                onClick={() => setIsOpen(false)}
+                className="block py-1 border-b border-white/10 hover:text-blue-300"
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+
+          {/* Entertainment */}
           <div>
             <h2 className="text-sm font-bold mt-4 mb-1">Dining & Entertainment</h2>
             {entertainment.map((item, idx) => (
@@ -87,11 +169,21 @@ export default function AnimatedNavbar() {
                 key={idx}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
-                className="block text-sm py-1 border-b border-white/10 hover:text-blue-300"
+                className="block py-1 border-b border-white/10 hover:text-blue-300"
               >
                 {item.label}
               </a>
             ))}
+          </div>
+
+          {/* Theme Toggle */}
+          <div className="pt-4">
+            <button
+              onClick={toggleDarkMode}
+              className="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded-md text-sm"
+            >
+              {isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            </button>
           </div>
         </div>
       )}
