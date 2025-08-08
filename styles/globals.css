@@ -218,3 +218,70 @@ body.dark {
   background-size: 400% 400%;
   animation: rainbowFlow 20s ease infinite;
 }
+@keyframes heroIn {
+  0% { opacity: 0; transform: scale(1.05) translateY(8px); }
+  100% { opacity: 1; transform: scale(1.0) translateY(0); }
+}
+.animate-heroIn {
+  animation: heroIn 1000ms ease-out both;
+}
+
+@keyframes caret {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.animate-caret {
+  animation: caret 1s steps(1, end) infinite;
+}
+
+.features-bg {
+  overflow: hidden;
+}
+
+.waveBlob {
+  position: absolute;
+  width: 60rem;
+  height: 60rem;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.35;
+  animation: blobMove 32s linear infinite;
+  will-change: transform;
+}
+
+.wave1 {
+  top: -25%;
+  left: -20%;
+  background:
+    radial-gradient(40% 40% at 30% 30%, #3b82f6 0%, transparent 70%),
+    radial-gradient(35% 35% at 70% 70%, #06b6d4 0%, transparent 70%);
+  animation-duration: 36s;
+}
+
+.wave2 {
+  bottom: -30%;
+  right: -15%;
+  background:
+    radial-gradient(45% 45% at 65% 35%, #a855f7 0%, transparent 72%),
+    radial-gradient(35% 35% at 30% 70%, #ec4899 0%, transparent 68%);
+  animation-duration: 42s;
+  opacity: 0.30;
+}
+
+.wave3 {
+  top: 10%;
+  right: 25%;
+  background:
+    radial-gradient(40% 40% at 50% 50%, #f59e0b 0%, transparent 70%),
+    radial-gradient(35% 35% at 30% 30%, #84cc16 0%, transparent 70%);
+  animation-duration: 50s;
+  opacity: 0.25;
+}
+
+@keyframes blobMove {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  25%  { transform: translate3d(8%, -6%, 0) rotate(90deg) scale(1.05); }
+  50%  { transform: translate3d(0, -2%, 0) rotate(180deg) scale(0.98); }
+  75%  { transform: translate3d(-6%, 6%, 0) rotate(270deg) scale(1.04); }
+  100% { transform: translate3d(0, 0, 0) rotate(360deg) scale(1); }
+}

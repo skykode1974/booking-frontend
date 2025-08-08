@@ -5,6 +5,8 @@ import "flatpickr/dist/themes/material_green.css";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import '../styles/globals.css';
+
 
 export default function App({ Component, pageProps }) {
   const [theme, setTheme] = useState("light");

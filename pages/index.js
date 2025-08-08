@@ -30,13 +30,41 @@ export default function Home() {
   return (
     <>
 
+  <section id="home">
+        <HeroSlider />
+      </section>
       <AnimatedNavbar />
-      <HeroSlider />
+      
       <HeroHeader />
-      <RoomTypeList />
-      <Features /> {/* ✅ New section added here */}
+
+   {/* Book a Room section */}
+      <section id="rooms" className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4">
+          
+             <RoomTypeList />
+        </div>
+      </section>
+
+
+     <section id="features" className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4">
+          
+          <Features />
+        </div>
+      </section>
+    
+
+
       <GalleryShowcase />
-      <ContactUs />
+
+  {/* Contact Us section */}
+      <section id="contact" className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          
+           <ContactUs />
+        </div>
+      </section>
+     
       <BottomWave />
       <ToastContainer position="top-right" theme="dark" autoClose={3000} />
       <Footer />

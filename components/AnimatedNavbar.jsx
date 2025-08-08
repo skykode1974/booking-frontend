@@ -6,44 +6,51 @@ export default function AnimatedNavbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
+  // Smooth scroll helper
+  const scrollToSection = (id) => {
+    const el = document.querySelector(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+      setIsOpen(false); // close mobile menu if open
+    }
+  };
+
   // Apply theme on mount
-useEffect(() => {
-  const savedTheme = localStorage.getItem("theme");
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-  if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
-    document.documentElement.classList.add("dark");
-    document.body.classList.add("dark");
-    document.body.classList.remove("light");
-    setIsDark(true);
-  } else {
-    document.documentElement.classList.remove("dark");
-    document.body.classList.remove("dark");
-    document.body.classList.add("light");
-    setIsDark(false);
-  }
-}, []);
+    if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
+      document.documentElement.classList.add("dark");
+      document.body.classList.add("dark");
+      document.body.classList.remove("light");
+      setIsDark(true);
+    } else {
+      document.documentElement.classList.remove("dark");
+      document.body.classList.remove("dark");
+      document.body.classList.add("light");
+      setIsDark(false);
+    }
+  }, []);
 
-const toggleDarkMode = () => {
-  const html = document.documentElement;
-  const body = document.body;
-  const newTheme = !isDark;
+  const toggleDarkMode = () => {
+    const html = document.documentElement;
+    const body = document.body;
+    const newTheme = !isDark;
 
-  if (newTheme) {
-    html.classList.add("dark");
-    body.classList.add("dark");
-    body.classList.remove("light");
-    localStorage.setItem("theme", "dark");
-  } else {
-    html.classList.remove("dark");
-    body.classList.remove("dark");
-    body.classList.add("light");
-    localStorage.setItem("theme", "light");
-  }
-
-  setIsDark(newTheme);
-};
-
+    if (newTheme) {
+      html.classList.add("dark");
+      body.classList.add("dark");
+      body.classList.remove("light");
+      localStorage.setItem("theme", "dark");
+    } else {
+      html.classList.remove("dark");
+      body.classList.remove("dark");
+      body.classList.add("light");
+      localStorage.setItem("theme", "light");
+    }
+    setIsDark(newTheme);
+  };
 
   const bookings = [
     { label: "Room Booking", href: "/room-booking" },
@@ -57,26 +64,30 @@ const toggleDarkMode = () => {
   ];
 
   const pages = [
-    { label: "Home", href: "/" },
-    { label: "Features", href: "#features" },
-    { label: "Rooms", href: "#rooms" },
-    { label: "Gallery", href: "#gallery" },
-    { label: "Contact", href: "/contact" },
+    { label: "Home", target: "#home" },
+    { label: "Features", target: "#features" },
+    { label: "Rooms", target: "#rooms" },
+    { label: "Contact", target: "#contact" },
   ];
 
   return (
     <nav className="fixed top-0 left-0 w-full z-50 backdrop-blur-md bg-white/5 text-white shadow-sm border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
-        <h1 className="text-lg md:text-xl font-bold text-white">Awrab Suite Hotel</h1>
+        <h1 className="text-lg md:text-xl font-bold text-white">
+          Awrab Suite Hotel
+        </h1>
 
         {/* Desktop Menu */}
         <ul className="hidden md:flex items-center space-x-6 text-sm font-medium">
           {pages.map((item, idx) => (
             <li key={idx}>
-              <a href={item.href} className="hover:text-blue-400 transition">
+              <button
+                onClick={() => scrollToSection(item.target)}
+                className="hover:text-blue-400 transition"
+              >
                 {item.label}
-              </a>
+              </button>
             </li>
           ))}
 
@@ -86,7 +97,10 @@ const toggleDarkMode = () => {
             <ul className="absolute hidden group-hover:block top-full left-0 bg-white text-black rounded shadow-md mt-2 min-w-[180px]">
               {bookings.map((item, idx) => (
                 <li key={idx}>
-                  <a href={item.href} className="block px-4 py-2 hover:bg-blue-100">
+                  <a
+                    href={item.href}
+                    className="block px-4 py-2 hover:bg-blue-100"
+                  >
                     {item.label}
                   </a>
                 </li>
@@ -100,7 +114,10 @@ const toggleDarkMode = () => {
             <ul className="absolute hidden group-hover:block top-full left-0 bg-white text-black rounded shadow-md mt-2 min-w-[180px]">
               {entertainment.map((item, idx) => (
                 <li key={idx}>
-                  <a href={item.href} className="block px-4 py-2 hover:bg-blue-100">
+                  <a
+                    href={item.href}
+                    className="block px-4 py-2 hover:bg-blue-100"
+                  >
                     {item.label}
                   </a>
                 </li>
@@ -122,7 +139,10 @@ const toggleDarkMode = () => {
 
         {/* Mobile Hamburger */}
         <div className="md:hidden">
-          <button onClick={() => setIsOpen(!isOpen)} className="text-white">
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="text-white"
+          >
             {isOpen ? <HiX size={24} /> : <HiMenu size={24} />}
           </button>
         </div>
@@ -135,14 +155,13 @@ const toggleDarkMode = () => {
           <div>
             <h2 className="text-sm font-bold mb-1">Navigation</h2>
             {pages.map((item, idx) => (
-              <a
+              <button
                 key={idx}
-                href={item.href}
-                onClick={() => setIsOpen(false)}
-                className="block py-1 border-b border-white/10 hover:text-blue-300"
+                onClick={() => scrollToSection(item.target)}
+                className="block py-1 border-b border-white/10 hover:text-blue-300 w-full text-left"
               >
                 {item.label}
-              </a>
+              </button>
             ))}
           </div>
 
