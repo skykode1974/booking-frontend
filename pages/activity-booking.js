@@ -2,6 +2,8 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useState, useEffect } from "react";
 import ParticlesBackground from "@/components/ParticlesBackground";
+import { getJSON, mediaURL } from "./http";
+
 
 export default function ActivityBookingPage() {
   const [form, setForm] = useState({
@@ -28,7 +30,7 @@ useEffect(() => {
     return;
   }
 
-  fetch(`https://hotel.skykode.com.ng/api/hms/activities/${form.booking_date}`)
+  fetch(`https://admin.awrabsuiteshotel.com.ng/api/hms/activities/${form.booking_date}`)
     .then((res) => res.json())
     .then((data) => {
       const dayKey = getDayKey(form.booking_date);
@@ -139,7 +141,7 @@ const handleCheckbox = (activity) => {
     const gymDates = isGymSelected ? getGymDates() : { start_date: null, end_date: null };
 
     try {
-      const res = await fetch("https://hotel.skykode.com.ng/api/book-activity", {
+      const res = await fetch("https://admin.awrabsuiteshotel.com.ng/api/book-activity", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

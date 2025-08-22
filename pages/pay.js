@@ -31,7 +31,7 @@ export default function PayPage() {
         callback: function (response) {
           setStatusMessage("✅ Payment successful. Saving booking...");
 
-          fetch("https://hotel.skykode.com.ng/api/book", {
+          fetch("https://admin.awrabsuiteshotel.com.ng/api/book", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

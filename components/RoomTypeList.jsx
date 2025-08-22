@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import BookingModal from "./BookingModal";
+ 
 
 const amenityMap = {
   "9": "WiFi",
@@ -23,7 +24,7 @@ function RoomTypeList() {
 
   useEffect(() => {
     axios
-      .get("https://hotel.skykode.com.ng/api/room-types")
+      .get("https://admin.awrabsuiteshotel.com.ng/api/room-types")
       .then((response) => {
         setRoomTypes(response.data);
       })

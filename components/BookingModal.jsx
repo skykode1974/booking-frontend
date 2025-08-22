@@ -37,7 +37,7 @@ function BookingModal({ roomType, onClose }) {
     if (form.arrival_date && form.departure_date) {
       (async () => {
         try {
-          const res = await axios.get("https://hotel.skykode.com.ng/api/available-rooms", {
+          const res = await axios.get("https://admin.awrabsuiteshotel.com.ng/api/available-rooms", {
             params: {
               arrival: form.arrival_date,
               departure: form.departure_date,
