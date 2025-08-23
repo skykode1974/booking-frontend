@@ -1,8 +1,9 @@
+'use client';
+import axios from "axios";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useState, useEffect } from "react";
 import ParticlesBackground from "@/components/ParticlesBackground";
-import { getJSON, mediaURL } from "./http";
 
 
 export default function ActivityBookingPage() {
