@@ -111,7 +111,7 @@ export default function PayPage() {
 
               setTimeout(() => {
                 window.location.href = "/thank-activity";
-                window.open(`https://wa.me/2348167332529?text=${message}`, "_blank");
+                window.open(`https://wa.me/2349161693006?text=${message}`, "_blank");
               }, 500);
             } else {
               alert("⚠️ Payment received, but booking failed. Contact support.");

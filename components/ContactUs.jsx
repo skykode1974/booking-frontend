@@ -15,8 +15,9 @@ export default function ContactUs() {
           </p>
 
           <div className="space-y-3 text-sm" style={{ color: "var(--muted)" }}>
-            <p><strong>📍 Address:</strong> 123 Awrab Suite Hotel, Offa, Kwara State, Nigeria</p>
-            <p><strong>📞 Phone:</strong> +234 816 733 2529</p>
+            <p><strong>📍 Address:</strong> Rabiat Ibilola Ajeigbe Street,
+Olorunshogo, off Ojoku Road, Lamodi area, Offa, Kwara state.</p>
+            <p><strong>📞 Phone:</strong> +2349161693006</p>
 
             <p className="flex items-center gap-2 text-sm">
               <span className="text-green-500">
@@ -25,7 +26,7 @@ export default function ContactUs() {
                   <path d="M12.6 20.3a9.44 9.44 0 0 1-4.79-1.29l-.34-.2-2.92 1.17.56-3.01-.2-.32a9.5 9.5 0 0 1 15.15-10.64 9.5 9.5 0 0 1-7.46 14.3Z" />
                 </svg>
               </span>
-              <a href="https://wa.me/2348167332529" target="_blank" rel="noopener noreferrer" className="hover:underline">
+              <a href="https://wa.me/2349161693006" target="_blank" rel="noopener noreferrer" className="hover:underline">
                 +44 1234 567 890
               </a>
             </p>

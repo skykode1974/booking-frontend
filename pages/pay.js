@@ -37,6 +37,7 @@ export default function PayPage() {
             body: JSON.stringify({
               ...bookingData,
               amount_paid: amountKobo / 100,
+
               payment_ref: response.reference,
               payment_status: "paid",
             }),
@@ -60,7 +61,7 @@ export default function PayPage() {
 
                 setTimeout(() => {
                   window.location.href = "/thank-you";
-                  window.open(`https://wa.me/2348167332529?text=${message}`, "_blank");
+                  window.open(`https://wa.me/2349161693006?text=${message}`, "_blank");
                 }, 500);
               } else {
                 alert("⚠️ Payment received, but booking failed. Contact support.");

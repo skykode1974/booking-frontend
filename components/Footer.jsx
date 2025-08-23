@@ -27,8 +27,9 @@ export default function Footer() {
         <div>
           <h4 className="text-lg font-semibold text-white mb-3">Contact</h4>
           <ul className="text-sm space-y-2">
-            <li>📍 123 Awrab Crescent, Luton, UK</li>
-            <li>📞 +44 1234 567 890</li>
+            <li>📍  Rabiat Ibilola Ajeigbe Street,
+Olorunshogo, off Ojoku Road, Lamodi area, Offa, Kwara state</li>
+            <li>📞 +2349161693006</li>
             <li>✉️ reservations@awrabhotel.com</li>
           </ul>
         </div>

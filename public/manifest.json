@@ -1,11 +1,11 @@
 {
-  "name": "Skykode Hotel Booking",
-  "short_name": "Skykode Hotel",
+  "name": "Awrab Suites Hotel Booking",
+  "short_name": "Awrab Suites Hotel",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#006EFF",
-  "description": "Skykode Hotel Booking Progressive Web App",
+  "description": "Awrab Suites Hotel Booking Progressive Web App",
   "icons": [
     {
       "src": "/icon-192.png",

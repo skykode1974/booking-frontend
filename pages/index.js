@@ -77,7 +77,7 @@ export default function Home() {
 </div>
 
       <a
-        href="https://wa.me/2348167332529"
+        href="https://wa.me/2349161693006"
         className="fixed bottom-5 right-5 bg-green-500 hover:bg-green-600 text-white rounded-full p-4 shadow-lg z-[40]"
         target="_blank"
         rel="noopener noreferrer"
