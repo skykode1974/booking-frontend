@@ -36,6 +36,27 @@ const useImgFallback = () =>
     img.src = FALLBACK;
   }, []);
 
+// Tiny hook to make the QR size responsive (no horizontal overflow)
+function useResponsiveQrSize() {
+  const [size, setSize] = useState(320);
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      if (w < 360) setSize(200);
+      else if (w < 420) setSize(220);
+      else if (w < 480) setSize(240);
+      else if (w < 640) setSize(260);
+      else if (w < 768) setSize(280);
+      else if (w < 1024) setSize(300);
+      else setSize(320);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return size;
+}
+
 // Hero slides
 const slides = [
   "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1600&auto=format&fit=crop",
@@ -59,13 +80,14 @@ const drinks = [
   { name: "Mocktail Trio", desc: "Virgin mojito / sunrise / colada", price: 2500, img: "https://images.unsplash.com/photo-1551022370-1dc3f6c38788?q=80&w=800&auto=format&fit=crop" },
 ];
 
-const filters = ["Food", "Drinks"];
+const filters = ["All", "Food", "Drinks"];
 
 export default function Achopys() {
   const [index, setIndex] = useState(0);
-  const [filter, setFilter] = useState("Food");
+  const [filter, setFilter] = useState("All");
   const onImgError = useImgFallback();
   const onIllustrationError = useIllustrationFallback();
+  const qrSize = useResponsiveQrSize();
 
   const list = useMemo(() => {
     if (filter === "Food") return foods;
@@ -84,7 +106,7 @@ export default function Achopys() {
   return (
     <section
       id="achopys"
-      className="relative py-16 px-4 md:px-6"
+      className="relative py-16 px-4 md:px-6 overflow-x-hidden"
       style={{ backgroundColor: "var(--background)", color: "var(--foreground)" }}
     >
       <div className="max-w-7xl mx-auto">
@@ -100,7 +122,7 @@ export default function Achopys() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Slider */}
           <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 shadow-xl">
-            <div className="relative h-[280px] sm:h-[360px] md:h-[420px]">
+            <div className="relative h-[260px] sm:h-[340px] md:h-[420px]">
               <AnimatePresence initial={false} mode="wait">
                 <motion.img
                   key={index}
@@ -211,30 +233,37 @@ export default function Achopys() {
         {/* Row 2 (FULL-WIDTH 12 → 6/6): Illustration | QR */}
         <div className="mt-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
-            {/* LEFT: Illustration */}
-            <div className="relative h-[360px] md:h-[420px] lg:h-[480px] rounded-2xl overflow-hidden border border-white/10 shadow-xl">
+            {/* LEFT: Illustration (uses aspect on mobile to avoid overflow) */}
+            <div className="rounded-2xl overflow-hidden border border-white/10 shadow-xl aspect-[3/2] md:aspect-auto md:h-[420px] lg:h-[480px]">
               <img
                 src={ILLUS_PNG}
                 onError={onIllustrationError}
                 alt="Guest scanning QR to order"
-                className="absolute inset-0 w-full h-full object-cover"
+                className="w-full h-full object-cover"
               />
             </div>
 
-            {/* RIGHT: QR card */}
-            <div className="h-[360px] md:h-[420px] lg:h-[480px]">
-              <div className="h-full rounded-2xl border border-white/10 bg-white/5 p-6 md:p-10 flex flex-col items-center justify-center text-center shadow-xl">
-                <div className="w-full flex justify-center">
-                  <CatalodgeQR size={320} />
+            {/* RIGHT: QR card (no fixed height on mobile) */}
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 md:p-10 flex flex-col items-center justify-center text-center shadow-xl">
+              <div className="w-full flex justify-center">
+                {/* max-w-full ensures no horizontal overflow */}
+                <div className="max-w-full">
+                  <CatalodgeQR size={qrSize} />
                 </div>
-               
-             
               </div>
+              <p className="text-sm opacity-80 mt-4">
+                Scan to open Catalodge on your phone and place your order.
+              </p>
+              <Link
+                href="/catalodge"
+                className="inline-block mt-4 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm"
+              >
+                Open Catalodge
+              </Link>
             </div>
           </div>
         </div>
         {/* /Row 2 */}
-
       </div>
     </section>
   );
