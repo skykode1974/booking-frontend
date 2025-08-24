@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiPlus, FiMinus, FiTrash2, FiSearch, FiShoppingCart, FiX, FiArrowLeft } from 'react-icons/fi';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Link from 'next/link';
+
 
 // —— Menu (manual for now; later load from backend) ——
 const MENU = [
@@ -138,14 +140,15 @@ export default function CatalodgePage() {
 
       <div className="max-w-7xl mx-auto">
         {/* Back to Home only */}
-        <div className="mb-6">
-          <a
-            href="/"
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-white/20 hover:bg-white/10"
-          >
-            <FiArrowLeft /> Back to Home
-          </a>
-        </div>
+      {/* Back to Home only */}
+<div className="mb-6">
+  <Link
+    href="/"
+    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-white/20 hover:bg-white/10"
+  >
+    <FiArrowLeft /> Back to Home
+  </Link>
+</div>
 
         {/* Header */}
         <div className="mb-6">
