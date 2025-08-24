@@ -11,6 +11,9 @@ import BottomWave from '../components/BottomWave';
 import Footer from '../components/Footer';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import dynamic from 'next/dynamic';
+const CatalodgeQR = dynamic(() => import('../components/CatalodgeQR'), { ssr: false });
+
 
 export default function Home() {
   useEffect(() => {
@@ -47,6 +50,7 @@ export default function Home() {
       </section>
 
   <Achopys /> {/* 👈 Achopys section will appear here */}
+
 
      <section id="features" className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">

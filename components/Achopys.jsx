@@ -1,22 +1,42 @@
 'use client';
 import { useEffect, useMemo, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
-// ✅ Use a local fallback (create /public/achopys/placeholder.jpg)
-// If you don't have it yet, temporarily use: "https://via.placeholder.com/800x600?text=Achopys"
-const FALLBACK = "/achopys/placeholder.jpg";
+// Load the QR component client-side only
+const CatalodgeQR = dynamic(() => import("./CatalodgeQR"), { ssr: false });
 
-// robust onError handler (avoids infinite loop)
+// Illustration assets (PNG → SVG → placeholder)
+const ILLUS_PNG = "/achopys/guest-scanning.png";     // put in /public/achopys/
+const ILLUS_SVG = "/achopys/guest-scanning.svg";     // fallback SVG (provided)
+const ILLUS_PLACEHOLDER = "https://via.placeholder.com/900x700?text=Guest+scanning+QR";
+
+// image fallback helper: PNG -> SVG -> placeholder
+const useIllustrationFallback = () =>
+  useCallback((e) => {
+    const img = e.currentTarget;
+    if (!img.dataset.step) {
+      img.dataset.step = "png";
+      img.src = ILLUS_SVG;
+    } else if (img.dataset.step === "png") {
+      img.dataset.step = "svg";
+      img.src = ILLUS_PLACEHOLDER;
+    }
+  }, []);
+
+// Generic image fallback (for menu thumbnails)
+const FALLBACK = "/achopys/placeholder.jpg";
 const useImgFallback = () =>
   useCallback((e) => {
     const img = e.currentTarget;
-    if (img.dataset.fallback) return; // already swapped
+    if (img.dataset.fallback) return;
     img.dataset.fallback = "1";
     img.src = FALLBACK;
   }, []);
 
-// You can keep these remote URLs; any that fail will swap to FALLBACK automatically.
+// Hero slides
 const slides = [
   "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1600&auto=format&fit=crop",
   "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1600&auto=format&fit=crop",
@@ -24,6 +44,7 @@ const slides = [
   "https://images.unsplash.com/photo-1528697203043-733bfdca2f27?q=80&w=1600&auto=format&fit=crop",
 ];
 
+// Showcase items (temporary/manual)
 const foods = [
   { name: "Jollof Rice & Chicken", desc: "Classic Nigerian jollof with grilled chicken", price: 3500, img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=800&auto=format&fit=crop" },
   { name: "Fried Rice & Turkey", desc: "Stir-fried rice, veggies & grilled turkey", price: 4200, img: "https://images.unsplash.com/photo-1544025163-403d7b6856c2?q=80&w=800&auto=format&fit=crop" },
@@ -38,12 +59,13 @@ const drinks = [
   { name: "Mocktail Trio", desc: "Virgin mojito / sunrise / colada", price: 2500, img: "https://images.unsplash.com/photo-1551022370-1dc3f6c38788?q=80&w=800&auto=format&fit=crop" },
 ];
 
-const filters = ["All", "Food", "Drinks"];
+const filters = ["Food", "Drinks"];
 
 export default function Achopys() {
   const [index, setIndex] = useState(0);
-  const [filter, setFilter] = useState("All");
+  const [filter, setFilter] = useState("Food");
   const onImgError = useImgFallback();
+  const onIllustrationError = useIllustrationFallback();
 
   const list = useMemo(() => {
     if (filter === "Food") return foods;
@@ -60,10 +82,13 @@ export default function Achopys() {
   const next = () => setIndex((i) => (i + 1) % slides.length);
 
   return (
-    <section id="achopys" className="relative py-16 px-4 md:px-6"
+    <section
+      id="achopys"
+      className="relative py-16 px-4 md:px-6"
       style={{ backgroundColor: "var(--background)", color: "var(--foreground)" }}
     >
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="text-center mb-10">
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">Achopys Center</h2>
           <p className="mt-3 text-sm md:text-base opacity-80 max-w-2xl mx-auto">
@@ -71,6 +96,7 @@ export default function Achopys() {
           </p>
         </div>
 
+        {/* Row 1: Slider (6) | Menu (6) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Slider */}
           <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 shadow-xl">
@@ -90,12 +116,18 @@ export default function Achopys() {
               </AnimatePresence>
             </div>
 
-            <button onClick={prev} aria-label="Previous"
-              className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white p-2 rounded-full">
+            <button
+              onClick={prev}
+              aria-label="Previous"
+              className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white p-2 rounded-full"
+            >
               <FaChevronLeft />
             </button>
-            <button onClick={next} aria-label="Next"
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white p-2 rounded-full">
+            <button
+              onClick={next}
+              aria-label="Next"
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white p-2 rounded-full"
+            >
               <FaChevronRight />
             </button>
 
@@ -105,14 +137,17 @@ export default function Achopys() {
                   key={i}
                   aria-label={`Go to slide ${i + 1}`}
                   onClick={() => setIndex(i)}
-                  className={`h-2.5 rounded-full transition-all ${i === index ? "w-6 bg-white" : "w-2.5 bg-white/60 hover:bg-white/80"}`}
+                  className={`h-2.5 rounded-full transition-all ${
+                    i === index ? "w-6 bg-white" : "w-2.5 bg-white/60 hover:bg-white/80"
+                  }`}
                 />
               ))}
             </div>
           </div>
 
-          {/* Menu grid */}
+          {/* Menu list */}
           <div>
+            {/* Filters + CTA */}
             <div className="flex items-center gap-2 mb-4">
               {filters.map((f) => (
                 <button
@@ -126,9 +161,12 @@ export default function Achopys() {
                 </button>
               ))}
               <div className="ml-auto">
-                <a href="/catalodge" className="px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-black font-medium text-sm">
+                <Link
+                  href="/catalodge"
+                  className="px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-black font-medium text-sm"
+                >
                   Guests: Order via Catalodge
-                </a>
+                </Link>
               </div>
             </div>
 
@@ -168,6 +206,35 @@ export default function Achopys() {
             </div>
           </div>
         </div>
+        {/* /Row 1 */}
+
+        {/* Row 2 (FULL-WIDTH 12 → 6/6): Illustration | QR */}
+        <div className="mt-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+            {/* LEFT: Illustration */}
+            <div className="relative h-[360px] md:h-[420px] lg:h-[480px] rounded-2xl overflow-hidden border border-white/10 shadow-xl">
+              <img
+                src={ILLUS_PNG}
+                onError={onIllustrationError}
+                alt="Guest scanning QR to order"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            </div>
+
+            {/* RIGHT: QR card */}
+            <div className="h-[360px] md:h-[420px] lg:h-[480px]">
+              <div className="h-full rounded-2xl border border-white/10 bg-white/5 p-6 md:p-10 flex flex-col items-center justify-center text-center shadow-xl">
+                <div className="w-full flex justify-center">
+                  <CatalodgeQR size={320} />
+                </div>
+               
+             
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* /Row 2 */}
+
       </div>
     </section>
   );
