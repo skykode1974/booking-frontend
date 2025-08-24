@@ -36,15 +36,18 @@ Olorunshogo, off Ojoku Road, Lamodi area, Offa, Kwara state.</p>
           </div>
 
           <div className="w-full h-64 rounded-lg overflow-hidden border-2 border-blue-600">
-            <iframe
-              title="Awrab Hotel Map"
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2436.964289427757!2d-0.4253472841972588!3d51.87867197969465"
-              width="100%"
-              height="100%"
-              allowFullScreen=""
-              loading="lazy"
-              className="rounded-lg"
-            ></iframe>
+           <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
+  <iframe
+    title="Awrab Suites Hotel Map"
+    src="https://www.google.com/maps?q=Rabiat%20Ibilola%20Ajeigbe%20Street%2C%20Olorunshogo%2C%20off%20Ojoku%20Road%2C%20Lamodi%20area%2C%20Offa%2C%20Kwara%20State%2C%20Nigeria&z=16&output=embed"
+    className="absolute inset-0 h-full w-full rounded-lg"
+    loading="lazy"
+    allowFullScreen
+    referrerPolicy="no-referrer-when-downgrade"
+    style={{ border: 0 }}
+  />
+</div>
+
           </div>
         </div>
 

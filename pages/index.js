@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import AnimatedNavbar from '../components/AnimatedNavbar';
 import HeroHeader from '../components/HeroHeader';
 import RoomTypeList from '../components/RoomTypeList';
+import Achopys from '../components/Achopys';
 import Features from '../components/Features'; // ✅ New import
 import HeroSlider from '../components/HeroSlider';
 import GalleryShowcase from '../components/GalleryShowcase';
@@ -45,6 +46,7 @@ export default function Home() {
         </div>
       </section>
 
+  <Achopys /> {/* 👈 Achopys section will appear here */}
 
      <section id="features" className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">

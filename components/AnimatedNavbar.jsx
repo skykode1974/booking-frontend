@@ -1,10 +1,20 @@
-import { useState, useEffect } from "react";
+'use client';
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/router"; // pages router
 import { HiMenu, HiX } from "react-icons/hi";
 import { FaSun, FaMoon } from "react-icons/fa";
 
+const GUARD_DEST = "/catalodge"; // change this if needed
+
 export default function AnimatedNavbar() {
+  const router = useRouter();
+
   const [isOpen, setIsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+
+  // guard modal
+  const [guardOpen, setGuardOpen] = useState(false);
+  const [pendingDest, setPendingDest] = useState(null);
 
   // Smooth scroll helper
   const scrollToSection = (id) => {
@@ -57,11 +67,13 @@ export default function AnimatedNavbar() {
     { label: "Activity Booking", href: "/activity-booking" },
   ];
 
-  const entertainment = [
-    { label: "Restaurant", href: "/restaurant" },
-    { label: "Canteen", href: "/canteen" },
-    { label: "Bar", href: "/bar" },
-  ];
+  // mark these as guarded; clicking them triggers the modal then routes to GUARD_DEST
+ const entertainment = [
+  { label: "Restaurant", href: "/restaurant", guarded: true, guardDest: GUARD_DEST },
+  { label: "Eatery", href: "/canteen", guarded: true, guardDest: GUARD_DEST },
+  { label: "Club Bar", href: "/bar", guarded: true, guardDest: GUARD_DEST },
+];
+
 
   const pages = [
     { label: "Home", target: "#home" },
@@ -69,6 +81,76 @@ export default function AnimatedNavbar() {
     { label: "Rooms", target: "#rooms" },
     { label: "Contact", target: "#contact" },
   ];
+
+  const openGuard = useCallback((dest) => {
+    setPendingDest(dest || GUARD_DEST);
+    setGuardOpen(true);
+  }, []);
+
+  const confirmGuard = useCallback(() => {
+    const dest = pendingDest || GUARD_DEST;
+    setGuardOpen(false);
+    setIsOpen(false);
+    router.push(dest);
+  }, [pendingDest, router]);
+
+  const cancelGuard = useCallback(() => {
+    setGuardOpen(false);
+    setPendingDest(null);
+  }, []);
+
+  // intercept click for guarded items
+  const handleItemClick = (e, item) => {
+    if (item?.guarded) {
+      e.preventDefault();
+      openGuard(item.guardDest);
+    } else if (item?.href) {
+      e.preventDefault();
+      setIsOpen(false);
+      router.push(item.href);
+    }
+  };
+
+  // Reusable desktop dropdown (fixes hover gap with pt-2 bridge + guard support)
+  const DesktopDropdown = ({ label, items }) => (
+    <li className="group relative">
+      <button
+        type="button"
+        className="cursor-pointer select-none hover:text-blue-400 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded"
+        aria-haspopup="true"
+        aria-expanded="false"
+      >
+        {label}
+      </button>
+
+      {/* Hover bridge container */}
+      <div className="absolute left-0 top-full pt-2 z-[60]">
+        <ul
+          className="
+            pointer-events-none invisible opacity-0 translate-y-1
+            group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto
+            group-focus-within:visible group-focus-within:opacity-100 group-focus-within:translate-y-0 group-focus-within:pointer-events-auto
+            transition duration-150 ease-out
+            bg-white text-black rounded-md shadow-xl min-w-[200px] overflow-hidden
+          "
+          role="menu"
+        >
+          {items.map((item, idx) => (
+            <li key={idx} role="none">
+              <a
+                href={item.href}
+                onClick={(e) => handleItemClick(e, item)}
+                className="block px-4 py-2 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                role="menuitem"
+              >
+                {item.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </li>
+  );
 
   return (
     <nav className="fixed top-0 left-0 w-full z-50 backdrop-blur-md bg-white/5 text-white shadow-sm border-b border-white/10">
@@ -84,7 +166,7 @@ export default function AnimatedNavbar() {
             <li key={idx}>
               <button
                 onClick={() => scrollToSection(item.target)}
-                className="hover:text-blue-400 transition"
+                className="hover:text-blue-400 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded"
               >
                 {item.label}
               </button>
@@ -92,45 +174,17 @@ export default function AnimatedNavbar() {
           ))}
 
           {/* Bookings Dropdown */}
-          <li className="group relative">
-            <span className="cursor-pointer">Bookings</span>
-            <ul className="absolute hidden group-hover:block top-full left-0 bg-white text-black rounded shadow-md mt-2 min-w-[180px]">
-              {bookings.map((item, idx) => (
-                <li key={idx}>
-                  <a
-                    href={item.href}
-                    className="block px-4 py-2 hover:bg-blue-100"
-                  >
-                    {item.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </li>
+          <DesktopDropdown label="Bookings" items={bookings} />
 
-          {/* Entertainment Dropdown */}
-          <li className="group relative">
-            <span className="cursor-pointer">Dining</span>
-            <ul className="absolute hidden group-hover:block top-full left-0 bg-white text-black rounded shadow-md mt-2 min-w-[180px]">
-              {entertainment.map((item, idx) => (
-                <li key={idx}>
-                  <a
-                    href={item.href}
-                    className="block px-4 py-2 hover:bg-blue-100"
-                  >
-                    {item.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </li>
+          {/* Dining Dropdown (guarded) */}
+          <DesktopDropdown label="Dining" items={entertainment} />
 
-          {/* Theme Toggle Button */}
+          {/* Theme Toggle */}
           <li>
             <button
               onClick={toggleDarkMode}
               title="Toggle Theme"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-full"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
             >
               {isDark ? <FaSun size={16} /> : <FaMoon size={16} />}
             </button>
@@ -141,7 +195,8 @@ export default function AnimatedNavbar() {
         <div className="md:hidden">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="text-white"
+            className="text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded"
+            aria-label="Toggle menu"
           >
             {isOpen ? <HiX size={24} /> : <HiMenu size={24} />}
           </button>
@@ -158,7 +213,7 @@ export default function AnimatedNavbar() {
               <button
                 key={idx}
                 onClick={() => scrollToSection(item.target)}
-                className="block py-1 border-b border-white/10 hover:text-blue-300 w-full text-left"
+                className="block py-2 border-b border-white/10 hover:text-blue-300 w-full text-left"
               >
                 {item.label}
               </button>
@@ -172,23 +227,23 @@ export default function AnimatedNavbar() {
               <a
                 key={idx}
                 href={item.href}
-                onClick={() => setIsOpen(false)}
-                className="block py-1 border-b border-white/10 hover:text-blue-300"
+                onClick={(e) => handleItemClick(e, item)}
+                className="block py-2 border-b border-white/10 hover:text-blue-300"
               >
                 {item.label}
               </a>
             ))}
           </div>
 
-          {/* Entertainment */}
+          {/* Dining & Entertainment (guarded) */}
           <div>
             <h2 className="text-sm font-bold mt-4 mb-1">Dining & Entertainment</h2>
             {entertainment.map((item, idx) => (
               <a
                 key={idx}
                 href={item.href}
-                onClick={() => setIsOpen(false)}
-                className="block py-1 border-b border-white/10 hover:text-blue-300"
+                onClick={(e) => handleItemClick(e, item)}
+                className="block py-2 border-b border-white/10 hover:text-blue-300"
               >
                 {item.label}
               </a>
@@ -203,6 +258,41 @@ export default function AnimatedNavbar() {
             >
               {isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Guard Modal */}
+      {guardOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="guard-title"
+        >
+          <div className="w-full max-w-sm rounded-xl bg-white text-black shadow-2xl overflow-hidden">
+            <div className="p-4">
+              <h3 id="guard-title" className="text-lg font-semibold mb-1">
+                Please Note
+              </h3>
+              <p className="text-sm">
+                Only lodged customers can order for service online.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 border-t p-3">
+              <button
+                onClick={cancelGuard}
+                className="px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmGuard}
+                className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+              >
+                OK
+              </button>
+            </div>
           </div>
         </div>
       )}
