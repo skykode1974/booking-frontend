@@ -1,11 +1,10 @@
 'use client';
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiPlus, FiMinus, FiTrash2, FiSearch, FiShoppingCart, FiX, FiArrowLeft } from 'react-icons/fi';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Link from 'next/link';
-
 
 // —— Menu (manual for now; later load from backend) ——
 const MENU = [
@@ -66,6 +65,7 @@ export default function CatalodgePage() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [phone, setPhone] = useState('');
   const [room, setRoom] = useState('');
+  const [mobileCartOpen, setMobileCartOpen] = useState(false); // 👈 NEW
 
   // Load/save cart
   useEffect(() => {
@@ -108,6 +108,8 @@ export default function CatalodgePage() {
 
   const openCheckout = () => {
     if (cart.length === 0) return toast.error('Your cart is empty');
+    // If coming from mobile drawer, close it before showing checkout modal
+    setMobileCartOpen(false);
     setCheckoutOpen(true);
   };
 
@@ -133,22 +135,21 @@ export default function CatalodgePage() {
   };
 
   return (
-    <main className="min-h-screen pt-8 pb-16 px-4 md:px-6"
+    <main className="min-h-screen pt-8 pb-24 px-4 md:px-6"
       style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
     >
       <ToastContainer />
 
       <div className="max-w-7xl mx-auto">
         {/* Back to Home only */}
-      {/* Back to Home only */}
-<div className="mb-6">
-  <Link
-    href="/"
-    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-white/20 hover:bg-white/10"
-  >
-    <FiArrowLeft /> Back to Home
-  </Link>
-</div>
+        <div className="mb-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-white/20 hover:bg-white/10"
+          >
+            <FiArrowLeft /> Back to Home
+          </Link>
+        </div>
 
         {/* Header */}
         <div className="mb-6">
@@ -209,9 +210,7 @@ export default function CatalodgePage() {
                           {item.category}{item.unit ? ` • ${item.unit}` : ''}
                         </div>
                       </div>
-                      <div className="text-blue-400 font-bold">
-                        {`₦${Number(item.price).toLocaleString('en-NG')}`}
-                      </div>
+                      <div className="text-blue-400 font-bold">{fmt(item.price)}</div>
                     </div>
 
                     <button
@@ -226,124 +225,259 @@ export default function CatalodgePage() {
             </div>
           </div>
 
-          {/* Cart panel */}
-          <div className="lg:sticky lg:top-8 h-max border border-white/10 rounded-xl p-4 bg-white/5 backdrop-blur-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <FiShoppingCart />
-              <h2 className="font-semibold">Your Tray</h2>
-              <span className="ml-auto text-xs opacity-70">{cart.length} item{cart.length !== 1 ? 's' : ''}</span>
-            </div>
-
-            {cart.length === 0 ? (
-              <div className="text-sm opacity-70">No items yet. Add from the menu.</div>
-            ) : (
-              <div className="space-y-3">
-                {cart.map((i) => (
-                  <div key={i.id} className="flex items-center justify-between gap-3 border-b border-white/10 pb-2">
-                    <div className="min-w-0">
-                      <div className="font-medium truncate">{i.name}</div>
-                      <div className="text-xs opacity-70">
-                        {i.unit ? `${i.unit} • ` : ''}{fmt(i.price)}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => dec(i.id)} className="px-2 rounded border border-white/20 hover:bg-white/10">-</button>
-                      <div className="w-8 text-center">{i.qty}</div>
-                      <button onClick={() => inc(i.id)} className="px-2 rounded border border-white/20 hover:bg-white/10">+</button>
-                      <button onClick={() => removeItem(i.id)} className="p-1 rounded border border-white/20 hover:bg-white/10 text-red-400">
-                        <FiTrash2 />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                <div className="flex items-center justify-between pt-2">
-                  <div className="font-semibold">Subtotal</div>
-                  <div className="font-bold text-blue-400">{fmt(subtotal)}</div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={openCheckout}
-                    className="flex-1 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    Checkout
-                  </button>
-                  <button
-                    onClick={clearCart}
-                    className="py-2 px-3 rounded-md border border-white/20 hover:bg-white/10 text-sm"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-            )}
+          {/* Desktop cart panel (hidden on mobile) */}
+          <div className="hidden lg:block">
+            <CartPanel
+              cart={cart}
+              inc={inc}
+              dec={dec}
+              removeItem={removeItem}
+              clearCart={clearCart}
+              subtotal={subtotal}
+              openCheckout={openCheckout}
+            />
           </div>
         </div>
       </div>
 
+      {/* Floating cart button (mobile only) */}
+      <button
+        onClick={() => setMobileCartOpen(true)}
+        className="lg:hidden fixed bottom-5 right-5 z-50 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg px-4 py-3 flex items-center gap-2"
+        aria-label="Open cart"
+      >
+        <FiShoppingCart />
+        <span className="text-sm font-semibold">Tray</span>
+        {cart.length > 0 && (
+          <span className="ml-1 inline-flex items-center justify-center rounded-full bg-white text-blue-700 text-xs font-bold w-6 h-6">
+            {cart.length}
+          </span>
+        )}
+      </button>
+
+      {/* Mobile cart drawer */}
+      <MobileCartDrawer
+        open={mobileCartOpen}
+        onClose={() => setMobileCartOpen(false)}
+        cart={cart}
+        inc={inc}
+        dec={dec}
+        removeItem={removeItem}
+        clearCart={clearCart}
+        subtotal={subtotal}
+        openCheckout={openCheckout}
+      />
+
       {/* Checkout Modal */}
       {checkoutOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white text-black shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold">Room Delivery Details</h3>
-              <button onClick={() => setCheckoutOpen(false)} className="p-1 rounded hover:bg-black/5"><FiX /></button>
-            </div>
+        <CheckoutModal
+          cart={cart}
+          subtotal={subtotal}
+          phone={phone}
+          setPhone={setPhone}
+          room={room}
+          setRoom={setRoom}
+          onClose={() => setCheckoutOpen(false)}
+          onSubmit={submitOrder}
+        />
+      )}
+    </main>
+  );
+}
 
-            <form onSubmit={submitOrder} className="p-4 space-y-3">
-              <div>
-                <label className="block text-sm font-medium mb-1">Phone Number</label>
-                <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+234 812 345 6789"
-                  className="w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+function CartPanel({ cart, inc, dec, removeItem, clearCart, subtotal, openCheckout }) {
+  return (
+    <div className="lg:sticky lg:top-8 h-max border border-white/10 rounded-xl p-4 bg-white/5 backdrop-blur-sm">
+      <div className="flex items-center gap-2 mb-3">
+        <FiShoppingCart />
+        <h2 className="font-semibold">Your Tray</h2>
+        <span className="ml-auto text-xs opacity-70">{cart.length} item{cart.length !== 1 ? 's' : ''}</span>
+      </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Room Number</label>
-                <input
-                  value={room}
-                  onChange={(e) => setRoom(e.target.value)}
-                  placeholder="e.g., 204"
-                  className="w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="bg-black/5 rounded-md p-3 text-sm">
-                <div className="font-medium mb-1">Order Summary</div>
-                <ul className="space-y-1 max-h-40 overflow-auto">
-                  {cart.map((i) => (
-                    <li key={i.id} className="flex justify-between">
-                      <span className="truncate">{i.name} × {i.qty}</span>
-                      <span>{fmt(i.price * i.qty)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex justify-between mt-2 border-t pt-2">
-                  <span className="font-semibold">Subtotal</span>
-                  <span className="font-bold">{fmt(subtotal)}</span>
+      {cart.length === 0 ? (
+        <div className="text-sm opacity-70">No items yet. Add from the menu.</div>
+      ) : (
+        <div className="space-y-3">
+          {cart.map((i) => (
+            <div key={i.id} className="flex items-center justify-between gap-3 border-b border-white/10 pb-2">
+              <div className="min-w-0">
+                <div className="font-medium truncate">{i.name}</div>
+                <div className="text-xs opacity-70">
+                  {i.unit ? `${i.unit} • ` : ''}{fmt(i.price)}
                 </div>
               </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setCheckoutOpen(false)} className="px-4 py-2 rounded-md border hover:bg-black/5">
-                  Cancel
-                </button>
-                <button type="submit" className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">
-                  Place Order
+              <div className="flex items-center gap-2">
+                <button onClick={() => dec(i.id)} className="px-2 rounded border border-white/20 hover:bg-white/10">-</button>
+                <div className="w-8 text-center">{i.qty}</div>
+                <button onClick={() => inc(i.id)} className="px-2 rounded border border-white/20 hover:bg-white/10">+</button>
+                <button onClick={() => removeItem(i.id)} className="p-1 rounded border border-white/20 hover:bg-white/10 text-red-400">
+                  <FiTrash2 />
                 </button>
               </div>
-            </form>
-
-            <div className="p-3 text-xs text-center text-black/60 border-t">
-              Orders are prepared by Achopys Center and delivered to your room.
             </div>
+          ))}
+
+          <div className="flex items-center justify-between pt-2">
+            <div className="font-semibold">Subtotal</div>
+            <div className="font-bold text-blue-400">{fmt(subtotal)}</div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button onClick={openCheckout} className="flex-1 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white">
+              Checkout
+            </button>
+            <button onClick={clearCart} className="py-2 px-3 rounded-md border border-white/20 hover:bg-white/10 text-sm">
+              Clear
+            </button>
           </div>
         </div>
       )}
-    </main>
+    </div>
+  );
+}
+
+function MobileCartDrawer({ open, onClose, cart, inc, dec, removeItem, clearCart, subtotal, openCheckout }) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            className="fixed inset-0 z-[90] bg-black/60"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+          />
+          {/* Drawer */}
+          <motion.div
+            className="fixed inset-x-0 bottom-0 z-[95] bg-white text-black rounded-t-2xl shadow-2xl"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'tween', duration: 0.25 }}
+          >
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="font-semibold">Your Tray</div>
+              <button onClick={onClose} className="p-1 rounded hover:bg-black/5">
+                <FiX />
+              </button>
+            </div>
+
+            <div className="max-h-[55vh] overflow-auto p-4">
+              {cart.length === 0 ? (
+                <div className="text-sm text-black/70">No items yet. Add from the menu.</div>
+              ) : (
+                <div className="space-y-3">
+                  {cart.map((i) => (
+                    <div key={i.id} className="flex items-center justify-between gap-3 border-b border-black/10 pb-2">
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{i.name}</div>
+                        <div className="text-xs text-black/60">
+                          {i.unit ? `${i.unit} • ` : ''}{fmt(i.price)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => dec(i.id)} className="px-2 rounded border border-black/20 hover:bg-black/5">-</button>
+                        <div className="w-8 text-center">{i.qty}</div>
+                        <button onClick={() => inc(i.id)} className="px-2 rounded border border-black/20 hover:bg-black/5">+</button>
+                        <button onClick={() => removeItem(i.id)} className="p-1 rounded border border-black/20 hover:bg-black/5 text-red-500">
+                          <FiTrash2 />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="font-semibold">Subtotal</div>
+                <div className="font-bold text-blue-600">{fmt(subtotal)}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={openCheckout}
+                  className="flex-1 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white"
+                >
+                  Checkout
+                </button>
+                <button
+                  onClick={clearCart}
+                  className="py-2 px-3 rounded-md border border-black/20 hover:bg-black/5 text-sm"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function CheckoutModal({ cart, subtotal, phone, setPhone, room, setRoom, onClose, onSubmit }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-md rounded-xl bg-white text-black shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 className="text-lg font-semibold">Room Delivery Details</h3>
+          <button onClick={onClose} className="p-1 rounded hover:bg-black/5"><FiX /></button>
+        </div>
+
+        <form onSubmit={onSubmit} className="p-4 space-y-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Phone Number</label>
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+234 812 345 6789"
+              className="w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Room Number</label>
+            <input
+              value={room}
+              onChange={(e) => setRoom(e.target.value)}
+              placeholder="e.g., 204"
+              className="w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="bg-black/5 rounded-md p-3 text-sm">
+            <div className="font-medium mb-1">Order Summary</div>
+            <ul className="space-y-1 max-h-40 overflow-auto">
+              {cart.map((i) => (
+                <li key={i.id} className="flex justify-between">
+                  <span className="truncate">{i.name} × {i.qty}</span>
+                  <span>{fmt(i.price * i.qty)}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-between mt-2 border-t pt-2">
+              <span className="font-semibold">Subtotal</span>
+              <span className="font-bold">{fmt(subtotal)}</span>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-md border hover:bg-black/5">
+              Cancel
+            </button>
+            <button type="submit" className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">
+              Place Order
+            </button>
+          </div>
+        </form>
+
+        <div className="p-3 text-xs text-center text-black/60 border-t">
+          Orders are prepared by Achopys Center and delivered to your room.
+        </div>
+      </div>
+    </div>
   );
 }
