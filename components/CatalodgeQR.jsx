@@ -7,7 +7,7 @@ const CATALODGE_URL = 'https://awrabsuiteshotel.com.ng/catalodge';
 export default function CatalodgeQR({
   url = CATALODGE_URL,
   title = 'Scan to Order',
-  subtitle = 'Catalodge • Awrab Suite Hotel',
+  subtitle = 'Menu Catalodge • Awrab Suites Hotel',
   logoSrc = '/logo.png', // optional: place /public/logo.png
   size = 280,
 }) {
