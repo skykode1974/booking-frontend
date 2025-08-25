@@ -13,6 +13,12 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import dynamic from 'next/dynamic';
 const CatalodgeQR = dynamic(() => import('../components/CatalodgeQR'), { ssr: false });
+import PoolPartyTeaser from "@/components/PoolPartyTeaser";
+import EventsAccordion from "@/components/EventsAccordion";
+import ScrollProgressBar from "@/components/ScrollProgressBar";
+{/* at the very top of your page JSX */}
+import WaveDivider from "@/components/WaveDivider";
+import ActivityWave from "@/components/ActivityWave";
 
 
 export default function Home() {
@@ -35,11 +41,13 @@ export default function Home() {
     <>
 
   <section id="home">
+<ScrollProgressBar />
         <HeroSlider />
       </section>
       <AnimatedNavbar />
       
       <HeroHeader />
+
 
    {/* Book a Room section */}
       <section id="rooms" className="py-20 bg-gray-50">
@@ -49,20 +57,26 @@ export default function Home() {
         </div>
       </section>
 
+
+
+
   <Achopys /> {/* 👈 Achopys section will appear here */}
 
 
-     <section id="features" className="py-20 bg-gray-50">
+   
         <div className="container mx-auto px-4">
           
           <Features />
         </div>
-      </section>
-    
-
+     
+ 
 
       <GalleryShowcase />
 
+<ActivityWave height={240} density={28} />
+       <PoolPartyTeaser />
+ 
+  <EventsAccordion />
   {/* Contact Us section */}
       <section id="contact" className="py-20 bg-white">
         <div className="container mx-auto px-4">

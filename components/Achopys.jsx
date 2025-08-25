@@ -5,15 +5,16 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
-// Load the QR component client-side only
+// Client-only QR component
 const CatalodgeQR = dynamic(() => import("./CatalodgeQR"), { ssr: false });
 
-// Illustration assets (PNG → SVG → placeholder)
-const ILLUS_PNG = "/achopys/guest-scanning.png";     // put in /public/achopys/
-const ILLUS_SVG = "/achopys/guest-scanning.svg";     // fallback SVG (provided)
-const ILLUS_PLACEHOLDER = "https://via.placeholder.com/900x700?text=Guest+scanning+QR";
+/** Local assets (place these in /public/achopys/) */
+const ILLUS_PNG = "/achopys/guest-scanning.png";
+const ILLUS_SVG = "/achopys/guest-scanning.svg"; // optional fallback
+const ILLUS_PLACEHOLDER = "/achopys/placeholder.jpg";
+const FALLBACK = "/achopys/placeholder.jpg";
 
-// image fallback helper: PNG -> SVG -> placeholder
+/** Fallbacks */
 const useIllustrationFallback = () =>
   useCallback((e) => {
     const img = e.currentTarget;
@@ -26,8 +27,6 @@ const useIllustrationFallback = () =>
     }
   }, []);
 
-// Generic image fallback (for menu thumbnails)
-const FALLBACK = "/achopys/placeholder.jpg";
 const useImgFallback = () =>
   useCallback((e) => {
     const img = e.currentTarget;
@@ -36,19 +35,18 @@ const useImgFallback = () =>
     img.src = FALLBACK;
   }, []);
 
-// Tiny hook to make the QR size responsive (no horizontal overflow)
+/** Responsive QR size */
 function useResponsiveQrSize() {
-  const [size, setSize] = useState(320);
+  const [size, setSize] = useState(220); // ↓ smaller max
   useEffect(() => {
     const update = () => {
       const w = window.innerWidth;
-      if (w < 360) setSize(200);
-      else if (w < 420) setSize(220);
-      else if (w < 480) setSize(240);
-      else if (w < 640) setSize(260);
-      else if (w < 768) setSize(280);
-      else if (w < 1024) setSize(300);
-      else setSize(320);
+      if (w < 360) setSize(140);
+      else if (w < 420) setSize(160);
+      else if (w < 480) setSize(180);
+      else if (w < 640) setSize(190);
+      else if (w < 1024) setSize(200);
+      else setSize(220);
     };
     update();
     window.addEventListener("resize", update);
@@ -57,43 +55,60 @@ function useResponsiveQrSize() {
   return size;
 }
 
-// Hero slides
+
+/** Slider (local images) */
 const slides = [
-  "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1600&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1600&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=1600&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1528697203043-733bfdca2f27?q=80&w=1600&auto=format&fit=crop",
+  "/achopys/slider1.png",
+  "/achopys/slider2.jpeg",
+  "/achopys/slider3.webp",
 ];
 
-// Showcase items (temporary/manual)
+/** Menu data (local images) */
 const foods = [
-  { name: "Jollof Rice & Chicken", desc: "Classic Nigerian jollof with grilled chicken", price: 3500, img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=800&auto=format&fit=crop" },
-  { name: "Fried Rice & Turkey", desc: "Stir-fried rice, veggies & grilled turkey", price: 4200, img: "https://images.unsplash.com/photo-1544025163-403d7b6856c2?q=80&w=800&auto=format&fit=crop" },
-  { name: "Pounded Yam & Egusi", desc: "Rich melon soup, assorted meats", price: 4800, img: "https://images.unsplash.com/photo-1562967914-608f82629710?q=80&w=800&auto=format&fit=crop" },
-  { name: "Shawarma (Chicken)", desc: "Creamy, spicy wrap", price: 2800, img: "https://images.unsplash.com/photo-1604908554007-09e0e5c0d3d3?q=80&w=800&auto=format&fit=crop" },
+  {
+    name: "Jollof Rice & Chicken",
+    desc: "Classic Nigerian jollof with grilled chicken",
+    price: 3500,
+    img: "/achopys/jollof-chicken.jpg",
+  },
+  {
+    name: "Fried Rice & Turkey",
+    desc: "Stir-fried rice, veggies & grilled turkey",
+    price: 4200,
+    img: "/achopys/fried-rice-turkey.jpg",
+  },
+  {
+    name: "Pounded Yam & Egusi",
+    desc: "Rich melon soup, assorted meats",
+    price: 4800,
+    img: "/achopys/pounded-yam-egusi.jpg",
+  },
+  {
+    name: "Amala with Efo Riro",
+    desc: "Yam flour meal with spinach stew (efo riro)",
+    price: 2800,
+    img: "/achopys/amala-efo-riro.jpg",
+  },
 ];
 
 const drinks = [
-  { name: "Chapman", desc: "Refreshing Nigerian mocktail", price: 1800, img: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=800&auto=format&fit=crop" },
-  { name: "Fresh Juice", desc: "Pineapple / Orange / Watermelon", price: 1500, img: "https://images.unsplash.com/photo-1515734674582-29010bb37906?q=80&w=800&auto=format&fit=crop" },
-  { name: "Soft Drinks", desc: "Coke / Fanta / Sprite", price: 800, img: "https://images.unsplash.com/photo-1500051638674-ff996a0ec29e?q=80&w=800&auto=format&fit=crop" },
-  { name: "Mocktail Trio", desc: "Virgin mojito / sunrise / colada", price: 2500, img: "https://images.unsplash.com/photo-1551022370-1dc3f6c38788?q=80&w=800&auto=format&fit=crop" },
+  { name: "Red Wine", desc: "Rich, smooth red wine by the glass", price: 1800, img: "/achopys/red-wine.jpg" },
+  { name: "Fresh Juice", desc: "Pineapple / Orange / Watermelon", price: 1500, img: "/achopys/fresh-juice.jpg" },
+  { name: "Soft Drinks", desc: "Coke / Fanta / Sprite", price: 800, img: "/achopys/soft-drinks.jpg" },
+  { name: "Ice Cream", desc: "Creamy scoops, assorted flavors", price: 2500, img: "/achopys/ice-cream.jpg" },
 ];
 
-const filters = ["All", "Food", "Drinks"];
+/** Only Food & Drinks */
+const filters = ["Food", "Drinks"];
 
 export default function Achopys() {
   const [index, setIndex] = useState(0);
-  const [filter, setFilter] = useState("All");
+  const [filter, setFilter] = useState("Food");
   const onImgError = useImgFallback();
   const onIllustrationError = useIllustrationFallback();
   const qrSize = useResponsiveQrSize();
 
-  const list = useMemo(() => {
-    if (filter === "Food") return foods;
-    if (filter === "Drinks") return drinks;
-    return [...foods, ...drinks];
-  }, [filter]);
+  const list = useMemo(() => (filter === "Drinks" ? drinks : foods), [filter]);
 
   useEffect(() => {
     const id = setInterval(() => setIndex((i) => (i + 1) % slides.length), 4000);
@@ -122,7 +137,8 @@ export default function Achopys() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Slider */}
           <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 shadow-xl">
-            <div className="relative h-[260px] sm:h-[340px] md:h-[420px]">
+            <div className="relative h-[300px] sm:h-[360px] md:h-[420px]">
+
               <AnimatePresence initial={false} mode="wait">
                 <motion.img
                   key={index}
@@ -169,7 +185,7 @@ export default function Achopys() {
 
           {/* Menu list */}
           <div>
-            {/* Filters + CTA */}
+            {/* Tabs + CTA */}
             <div className="flex items-center gap-2 mb-4">
               {filters.map((f) => (
                 <button
@@ -213,9 +229,7 @@ export default function Achopys() {
                   <div className="p-3">
                     <div className="flex items-center justify-between gap-2">
                       <h4 className="font-semibold">{item.name}</h4>
-                      <span className="text-blue-400 font-semibold">
-                        ₦{Number(item.price).toLocaleString("en-NG")}
-                      </span>
+                    
                     </div>
                     <p className="text-xs opacity-80 mt-1">{item.desc}</p>
                   </div>
@@ -233,8 +247,9 @@ export default function Achopys() {
         {/* Row 2 (FULL-WIDTH 12 → 6/6): Illustration | QR */}
         <div className="mt-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
-            {/* LEFT: Illustration (uses aspect on mobile to avoid overflow) */}
-            <div className="rounded-2xl overflow-hidden border border-white/10 shadow-xl aspect-[3/2] md:aspect-auto md:h-[420px] lg:h-[480px]">
+            {/* LEFT: Illustration (compact, responsive) */}
+            <div className="rounded-2xl overflow-hidden border border-white/10 shadow-xl aspect-[3/2] md:aspect-auto md:h-[420px] lg:h-[460px]">
+
               <img
                 src={ILLUS_PNG}
                 onError={onIllustrationError}
@@ -243,23 +258,14 @@ export default function Achopys() {
               />
             </div>
 
-            {/* RIGHT: QR card (no fixed height on mobile) */}
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 md:p-10 flex flex-col items-center justify-center text-center shadow-xl">
+            {/* RIGHT: QR card (compact, responsive) */}
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 md:p-8 flex flex-col items-center justify-center text-center shadow-xl">
               <div className="w-full flex justify-center">
-                {/* max-w-full ensures no horizontal overflow */}
                 <div className="max-w-full">
                   <CatalodgeQR size={qrSize} />
                 </div>
               </div>
-              <p className="text-sm opacity-80 mt-4">
-                Scan to open Catalodge on your phone and place your order.
-              </p>
-              <Link
-                href="/catalodge"
-                className="inline-block mt-4 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm"
-              >
-                Open Catalodge
-              </Link>
+              {/* Removed extra text & button per request */}
             </div>
           </div>
         </div>

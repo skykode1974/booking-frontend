@@ -1,10 +1,12 @@
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiPlus, FiMinus, FiTrash2, FiSearch, FiShoppingCart, FiX, FiArrowLeft } from 'react-icons/fi';
+import { FiTrash2, FiSearch, FiShoppingCart, FiX, FiArrowLeft } from 'react-icons/fi';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import ActivityWave from '@/components/ActivityWave';
 
 // —— Menu (manual for now; later load from backend) ——
 const MENU = [
@@ -55,8 +57,37 @@ const MENU = [
   { id: 'predator', name: 'Predator', price: 1000, category: 'Drinks' },
 ];
 
+// Image map (fallbacks to slider1.jpg)
+const IMG_MAP = {
+  'fried-rice': '/achopys/fried-rice-turkey.jpg',
+  'jollof-rice': '/achopys/slider1.jpg',
+  'pasta': '/achopys/slider1.jpg',
+  'chicken': '/achopys/slider1.jpg',
+  'beef': '/achopys/slider1.jpg',
+  'fish': '/achopys/slider1.jpg',
+  'turkey': '/achopys/slider1.jpg',
+  'small-turkey': '/achopys/slider1.jpg',
+  'gizzard': '/achopys/slider1.jpg',
+  'ponmo': '/achopys/slider1.jpg',
+  'salad': '/achopys/slider1.jpg',
+  'moi-moi': '/achopys/slider1.jpg',
+  'takeaway': '/achopys/slider1.jpg',
+  'red-wine': '/achopys/red-wine.jpg',
+};
+
 const CATEGORIES = ['All', ...Array.from(new Set(MENU.map(i => i.category)))];
 const fmt = (n) => `₦${Number(n).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+// Emojis per category (for wave words)
+const EMOJI = {
+  'Pastries': ['🥐','🍩','🥖','🧁'],
+  'Rice & Pasta': ['🍛','🍝','🍚'],
+  'Swallows': ['🥣','🍲'],
+  'Soups': ['🥣','🍲'],
+  'Proteins': ['🍗','🥩','🐟','🦃'],
+  'Sides': ['🥗','🧆'],
+  'Drinks': ['🥤','🍹','🍷','🧃','🍺'],
+};
 
 export default function CatalodgePage() {
   const [query, setQuery] = useState('');
@@ -65,7 +96,17 @@ export default function CatalodgePage() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [phone, setPhone] = useState('');
   const [room, setRoom] = useState('');
-  const [mobileCartOpen, setMobileCartOpen] = useState(false); // 👈 NEW
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
+
+  // Build words for ActivityWave (food/drink + emoji)
+  const FOOD_WORDS = useMemo(() => {
+    const base = MENU.map((item, idx) => {
+      const choices = EMOJI[item.category] || ['⭐'];
+      const emoji = choices[idx % choices.length];
+      return `${item.name} ${emoji}`;
+    });
+    return Array.from(new Set(base)).slice(0, 60);
+  }, []);
 
   // Load/save cart
   useEffect(() => {
@@ -108,7 +149,6 @@ export default function CatalodgePage() {
 
   const openCheckout = () => {
     if (cart.length === 0) return toast.error('Your cart is empty');
-    // If coming from mobile drawer, close it before showing checkout modal
     setMobileCartOpen(false);
     setCheckoutOpen(true);
   };
@@ -134,13 +174,27 @@ export default function CatalodgePage() {
     setRoom('');
   };
 
+  // helper: get thumbnail per item (fallbacks to slider1.jpg)
+  const imgFor = (item) => IMG_MAP[item.id] || `/achopys/slider1.jpg`;
+
   return (
-    <main className="min-h-screen pt-8 pb-24 px-4 md:px-6"
+    <main
+      className="min-h-screen pt-8 pb-24"
       style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}
     >
       <ToastContainer />
 
-      <div className="max-w-7xl mx-auto">
+      {/* Animated Catalodge header */}
+      <ActivityWave
+        height={220}
+        density={28}
+        words={FOOD_WORDS}
+        palette={['#22c55e', '#0ea5e9', '#f59e0b', '#a855f7', '#ef4444']}
+      />
+
+      {/* Content */}
+<div className="mx-auto -mt-10 max-w-7xl px-4 md:px-6 relative z-10">
+     
         {/* Back to Home only */}
         <div className="mb-6">
           <Link
@@ -160,7 +214,7 @@ export default function CatalodgePage() {
         </div>
 
         {/* Top controls */}
-        <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between mb-6">
+        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           {/* Categories */}
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((c) => (
@@ -183,16 +237,16 @@ export default function CatalodgePage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search menu..."
-              className="w-full pl-10 pr-3 py-2 rounded-md border border-white/20 bg-white/5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-white/20 bg-white/5 py-2 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
         {/* Grid + Cart */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Menu grid */}
           <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <AnimatePresence>
                 {filtered.map((item) => (
                   <motion.div
@@ -201,24 +255,33 @@ export default function CatalodgePage() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.25 }}
-                    className="border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 backdrop-blur-sm"
+                    className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm hover:bg-white/10"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="font-semibold">{item.name}</div>
-                        <div className="text-xs opacity-70">
-                          {item.category}{item.unit ? ` • ${item.unit}` : ''}
-                        </div>
+                    {/* Row layout: left thumbnail + right info */}
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-neutral-100/30">
+                        <Image src={imgFor(item)} alt={item.name} fill className="object-cover" />
                       </div>
-                      <div className="text-blue-400 font-bold">{fmt(item.price)}</div>
-                    </div>
 
-                    <button
-                      onClick={() => addToCart(item)}
-                      className="mt-4 w-full rounded-md bg-blue-600 hover:bg-blue-700 text-white py-2 text-sm"
-                    >
-                      Add to Tray
-                    </button>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-semibold">{item.name}</div>
+                            <div className="text-xs opacity-70">
+                              {item.category}{item.unit ? ` • ${item.unit}` : ''}
+                            </div>
+                          </div>
+                          <div className="whitespace-nowrap font-bold text-blue-400">{fmt(item.price)}</div>
+                        </div>
+
+                        <button
+                          onClick={() => addToCart(item)}
+                          className="mt-3 w-full rounded-md bg-blue-600 py-2 text-sm text-white hover:bg-blue-700"
+                        >
+                          Add to Tray
+                        </button>
+                      </div>
+                    </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -243,13 +306,13 @@ export default function CatalodgePage() {
       {/* Floating cart button (mobile only) */}
       <button
         onClick={() => setMobileCartOpen(true)}
-        className="lg:hidden fixed bottom-5 right-5 z-50 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg px-4 py-3 flex items-center gap-2"
+        className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-white shadow-lg hover:bg-blue-700 lg:hidden"
         aria-label="Open cart"
       >
         <FiShoppingCart />
         <span className="text-sm font-semibold">Tray</span>
         {cart.length > 0 && (
-          <span className="ml-1 inline-flex items-center justify-center rounded-full bg-white text-blue-700 text-xs font-bold w-6 h-6">
+          <span className="ml-1 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-blue-700">
             {cart.length}
           </span>
         )}
@@ -287,11 +350,13 @@ export default function CatalodgePage() {
 
 function CartPanel({ cart, inc, dec, removeItem, clearCart, subtotal, openCheckout }) {
   return (
-    <div className="lg:sticky lg:top-8 h-max border border-white/10 rounded-xl p-4 bg-white/5 backdrop-blur-sm">
-      <div className="flex items-center gap-2 mb-3">
+    <div className="h-max rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm lg:sticky lg:top-8">
+      <div className="mb-3 flex items-center gap-2">
         <FiShoppingCart />
         <h2 className="font-semibold">Your Tray</h2>
-        <span className="ml-auto text-xs opacity-70">{cart.length} item{cart.length !== 1 ? 's' : ''}</span>
+        <span className="ml-auto text-xs opacity-70">
+          {cart.length} item{cart.length !== 1 ? 's' : ''}
+        </span>
       </div>
 
       {cart.length === 0 ? (
@@ -301,16 +366,19 @@ function CartPanel({ cart, inc, dec, removeItem, clearCart, subtotal, openChecko
           {cart.map((i) => (
             <div key={i.id} className="flex items-center justify-between gap-3 border-b border-white/10 pb-2">
               <div className="min-w-0">
-                <div className="font-medium truncate">{i.name}</div>
+                <div className="truncate font-medium">{i.name}</div>
                 <div className="text-xs opacity-70">
                   {i.unit ? `${i.unit} • ` : ''}{fmt(i.price)}
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => dec(i.id)} className="px-2 rounded border border-white/20 hover:bg-white/10">-</button>
+                <button onClick={() => dec(i.id)} className="rounded border border-white/20 px-2 hover:bg-white/10">-</button>
                 <div className="w-8 text-center">{i.qty}</div>
-                <button onClick={() => inc(i.id)} className="px-2 rounded border border-white/20 hover:bg-white/10">+</button>
-                <button onClick={() => removeItem(i.id)} className="p-1 rounded border border-white/20 hover:bg-white/10 text-red-400">
+                <button onClick={() => inc(i.id)} className="rounded border border-white/20 px-2 hover:bg-white/10">+</button>
+                <button
+                  onClick={() => removeItem(i.id)}
+                  className="rounded border border-white/20 p-1 text-red-400 hover:bg-white/10"
+                >
                   <FiTrash2 />
                 </button>
               </div>
@@ -323,10 +391,10 @@ function CartPanel({ cart, inc, dec, removeItem, clearCart, subtotal, openChecko
           </div>
 
           <div className="flex items-center gap-2">
-            <button onClick={openCheckout} className="flex-1 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white">
+            <button onClick={openCheckout} className="flex-1 rounded-md bg-green-600 py-2 text-white hover:bg-green-700">
               Checkout
             </button>
-            <button onClick={clearCart} className="py-2 px-3 rounded-md border border-white/20 hover:bg-white/10 text-sm">
+            <button onClick={clearCart} className="rounded-md border border-white/20 px-3 py-2 text-sm hover:bg-white/10">
               Clear
             </button>
           </div>
@@ -341,7 +409,6 @@ function MobileCartDrawer({ open, onClose, cart, inc, dec, removeItem, clearCart
     <AnimatePresence>
       {open && (
         <>
-          {/* Backdrop */}
           <motion.div
             className="fixed inset-0 z-[90] bg-black/60"
             initial={{ opacity: 0 }}
@@ -349,17 +416,16 @@ function MobileCartDrawer({ open, onClose, cart, inc, dec, removeItem, clearCart
             exit={{ opacity: 0 }}
             onClick={onClose}
           />
-          {/* Drawer */}
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-[95] bg-white text-black rounded-t-2xl shadow-2xl"
+            className="fixed inset-x-0 bottom-0 z-[95] rounded-t-2xl bg-white text-black shadow-2xl"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'tween', duration: 0.25 }}
           >
-            <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center justify-between border-b p-4">
               <div className="font-semibold">Your Tray</div>
-              <button onClick={onClose} className="p-1 rounded hover:bg-black/5">
+              <button onClick={onClose} className="rounded p-1 hover:bg-black/5">
                 <FiX />
               </button>
             </div>
@@ -372,16 +438,19 @@ function MobileCartDrawer({ open, onClose, cart, inc, dec, removeItem, clearCart
                   {cart.map((i) => (
                     <div key={i.id} className="flex items-center justify-between gap-3 border-b border-black/10 pb-2">
                       <div className="min-w-0">
-                        <div className="font-medium truncate">{i.name}</div>
+                        <div className="truncate font-medium">{i.name}</div>
                         <div className="text-xs text-black/60">
                           {i.unit ? `${i.unit} • ` : ''}{fmt(i.price)}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => dec(i.id)} className="px-2 rounded border border-black/20 hover:bg-black/5">-</button>
+                        <button onClick={() => dec(i.id)} className="rounded border border-black/20 px-2 hover:bg-black/5">-</button>
                         <div className="w-8 text-center">{i.qty}</div>
-                        <button onClick={() => inc(i.id)} className="px-2 rounded border border-black/20 hover:bg-black/5">+</button>
-                        <button onClick={() => removeItem(i.id)} className="p-1 rounded border border-black/20 hover:bg-black/5 text-red-500">
+                        <button onClick={() => inc(i.id)} className="rounded border border-black/20 px-2 hover:bg-black/5">+</button>
+                        <button
+                          onClick={() => removeItem(i.id)}
+                          className="rounded border border-black/20 p-1 text-red-500 hover:bg-black/5"
+                        >
                           <FiTrash2 />
                         </button>
                       </div>
@@ -391,22 +460,16 @@ function MobileCartDrawer({ open, onClose, cart, inc, dec, removeItem, clearCart
               )}
             </div>
 
-            <div className="border-t p-4 space-y-3">
+            <div className="space-y-3 border-t p-4">
               <div className="flex items-center justify-between">
                 <div className="font-semibold">Subtotal</div>
                 <div className="font-bold text-blue-600">{fmt(subtotal)}</div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={openCheckout}
-                  className="flex-1 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white"
-                >
+                <button onClick={openCheckout} className="flex-1 rounded-md bg-green-600 py-2 text-white hover:bg-green-700">
                   Checkout
                 </button>
-                <button
-                  onClick={clearCart}
-                  className="py-2 px-3 rounded-md border border-black/20 hover:bg-black/5 text-sm"
-                >
+                <button onClick={clearCart} className="rounded-md border border-black/20 px-3 py-2 text-sm hover:bg-black/5">
                   Clear
                 </button>
               </div>
@@ -421,15 +484,15 @@ function MobileCartDrawer({ open, onClose, cart, inc, dec, removeItem, clearCart
 function CheckoutModal({ cart, subtotal, phone, setPhone, room, setRoom, onClose, onSubmit }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white text-black shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b">
+      <div className="w-full max-w-md overflow-hidden rounded-xl bg-white text-black shadow-2xl">
+        <div className="flex items-center justify-between border-b p-4">
           <h3 className="text-lg font-semibold">Room Delivery Details</h3>
-          <button onClick={onClose} className="p-1 rounded hover:bg-black/5"><FiX /></button>
+          <button onClick={onClose} className="rounded p-1 hover:bg-black/5"><FiX /></button>
         </div>
 
-        <form onSubmit={onSubmit} className="p-4 space-y-3">
+        <form onSubmit={onSubmit} className="space-y-3 p-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Phone Number</label>
+            <label className="mb-1 block text-sm font-medium">Phone Number</label>
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -439,7 +502,7 @@ function CheckoutModal({ cart, subtotal, phone, setPhone, room, setRoom, onClose
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Room Number</label>
+            <label className="mb-1 block text-sm font-medium">Room Number</label>
             <input
               value={room}
               onChange={(e) => setRoom(e.target.value)}
@@ -448,9 +511,9 @@ function CheckoutModal({ cart, subtotal, phone, setPhone, room, setRoom, onClose
             />
           </div>
 
-          <div className="bg-black/5 rounded-md p-3 text-sm">
-            <div className="font-medium mb-1">Order Summary</div>
-            <ul className="space-y-1 max-h-40 overflow-auto">
+          <div className="rounded-md bg-black/5 p-3 text-sm">
+            <div className="mb-1 font-medium">Order Summary</div>
+            <ul className="max-h-40 space-y-1 overflow-auto">
               {cart.map((i) => (
                 <li key={i.id} className="flex justify-between">
                   <span className="truncate">{i.name} × {i.qty}</span>
@@ -458,23 +521,23 @@ function CheckoutModal({ cart, subtotal, phone, setPhone, room, setRoom, onClose
                 </li>
               ))}
             </ul>
-            <div className="flex justify-between mt-2 border-t pt-2">
+            <div className="mt-2 flex justify-between border-t pt-2">
               <span className="font-semibold">Subtotal</span>
               <span className="font-bold">{fmt(subtotal)}</span>
             </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-md border hover:bg-black/5">
+            <button type="button" onClick={onClose} className="rounded-md border px-4 py-2 hover:bg-black/5">
               Cancel
             </button>
-            <button type="submit" className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">
+            <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
               Place Order
             </button>
           </div>
         </form>
 
-        <div className="p-3 text-xs text-center text-black/60 border-t">
+        <div className="border-t p-3 text-center text-xs text-black/60">
           Orders are prepared by Achopys Center and delivered to your room.
         </div>
       </div>
