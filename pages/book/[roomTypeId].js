@@ -10,9 +10,17 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import ActivityWave from "@/components/ActivityWave";
-import { FiArrowLeft, FiClock, FiCheckCircle, FiShoppingCart, FiX, FiTrash2, FiCamera } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  FiArrowLeft,
+  FiClock,
+  FiCheckCircle,
+  FiShoppingCart,
+  FiX,
+  FiTrash2,
+  FiCamera,
+} from "react-icons/fi";
+
 
 const STATUS = {
   INACTIVE: "inactive",
@@ -241,32 +249,26 @@ export default function BookByTypePage() {
     <main className="min-h-screen bg-slate-950 text-white">
       <ToastContainer position="top-right" theme="dark" autoClose={2500} />
 
-      {/* Wave header */}
-      <div className="relative z-0 pointer-events-none">
-        <ActivityWave
-          height={220}
-          density={26}
-          words={WAVE_WORDS}
-          palette={["#22c55e", "#0ea5e9", "#f59e0b", "#a855f7", "#ef4444"]}
-        />
-      </div>
+   
 
-      <div className="relative z-10 -mt-10 mx-auto max-w-7xl px-4 pb-24">
-        {/* Back */}
-        <div className="mb-6">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-md border border-white/20 px-3 py-1.5 hover:bg-white/10"
-          >
-            <FiArrowLeft /> Back to Home
-          </Link>
-        </div>
+      <div className="relative z-10 mx-auto max-w-7xl px-4 pb-24">
+     {/* Back to Home */}
+<div className="mt-4 mb-6">
+  <Link
+    href="/"
+    className="inline-flex items-center gap-2 rounded-md border border-white/20 px-3 py-1.5 hover:bg-white/10"
+  >
+    <FiArrowLeft aria-hidden />
+    <span>Back to Home</span>
+  </Link>
+</div>
+
 
         {/* Header */}
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-extrabold">{roomTypeName || "Room Booking"}</h1>
-            <p className="opacity-80">Select your dates to see live availability and pick your room(s).</p>
+            <p className="opacity-80">Select your dates to see live available room(s).</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -278,7 +280,7 @@ export default function BookByTypePage() {
         </div>
 
         {/* Date pickers + price */}
-        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div>
             <label className="mb-1 block text-sm opacity-80">Arrival</label>
             <DatePicker
@@ -303,7 +305,7 @@ export default function BookByTypePage() {
               minDate={arrival || new Date()}
             />
           </div>
-          <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+          <div className="rounded-lg border border-white/10 bg-white/5 p-3 col-span-2 sm:col-span-1">
             <div className="text-sm opacity-80">Per night</div>
             <div className="text-2xl font-extrabold text-emerald-400">
               ₦{Number(pricePerNight || 0).toLocaleString("en-NG")}
