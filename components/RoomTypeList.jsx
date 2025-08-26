@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import BookingModal from "./BookingModal";
+  import Link from "next/link";
 
 const ADMIN_HOST = "https://admin.awrabsuiteshotel.com.ng";
 const IMAGE_FALLBACK = "/room-placeholder.jpg"; // (optional) put a placeholder in /public
@@ -292,12 +293,22 @@ export default function RoomTypeList() {
                     </>
                   )}
 
-                  <button
-                    onClick={() => setSelectedRoomType(room)}
-                    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md w-full transition"
-                  >
-                    Book Now
-                  </button>
+               
+
+// inside your room type card (room = current room type)
+<Link
+  href={{
+    pathname: `/book/${room.id}`, // dynamic page: pages/book/[roomTypeId].js
+    query: {
+      type: room.type,                                      // e.g. "Deluxe"
+      price: room?.pricing?.default_price_per_night ?? 0,   // pass price to the page
+    },
+  }}
+  className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md w-full transition text-center block"
+>
+  Book Now
+</Link>
+
                 </div>
               </div>
             </motion.div>

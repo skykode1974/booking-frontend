@@ -28,49 +28,62 @@ export default function PayPage() {
         currency: "NGN",
         ref: `AWRAB-${Date.now()}`,
 
-        callback: function (response) {
-          setStatusMessage("✅ Payment successful. Saving booking...");
+      callback: function (response) {
+  setStatusMessage("✅ Payment successful. Saving booking...");
 
-          fetch("https://admin.awrabsuiteshotel.com.ng/api/book", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ...bookingData,
-              amount_paid: amountKobo / 100,
+  const payload = {
+    ...bookingData,
+    amount_paid: amountKobo / 100,
+    payment_status: "paid",
 
-              payment_ref: response.reference,
-              payment_status: "paid",
-            }),
-          })
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.status === "success") {
-                const completeBooking = {
-                  ...bookingData,
-                  amount_paid: amountKobo / 100,
-                  payment_ref: response.reference,
-                  bookings: data.bookings || [],
-                };
+    // 👇 primary field Laravel expects
+    payment_ref: response.reference ?? "",
 
-                localStorage.setItem("latest_booking", JSON.stringify(completeBooking));
-                localStorage.removeItem("bookingData");
+    // 👇 compatibility aliases (harmless if unused)
+    payment_reference: response.reference ?? "",
+    reference: response.reference ?? "",
+    ref: response.reference ?? "",
+  };
 
-                const message = encodeURIComponent(
-                  `✅ Booking Confirmed!\nName: ${bookingData.full_name}\nPhone: ${bookingData.phone}\nReference: ${response.reference}\nArrival: ${bookingData.arrival_date}\nDeparture: ${bookingData.departure_date}`
-                );
+  fetch("/api/book", { // 👈 uses Next.js rewrite to your Laravel API
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    body: JSON.stringify(payload),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.status === "success") {
+        const completeBooking = {
+          ...bookingData,
+          amount_paid: amountKobo / 100,
+          payment_ref: response.reference,
+          bookings: data.bookings || [],
+        };
 
-                setTimeout(() => {
-                  window.location.href = "/thank-you";
-                  window.open(`https://wa.me/2349161693006?text=${message}`, "_blank");
-                }, 500);
-              } else {
-                alert("⚠️ Payment received, but booking failed. Contact support.");
-              }
-            })
-            .catch(() => {
-              alert("❌ Payment succeeded, but server error occurred.");
-            });
-        },
+        localStorage.setItem("latest_booking", JSON.stringify(completeBooking));
+        localStorage.removeItem("bookingData");
+
+        const message = encodeURIComponent(
+          `✅ Booking Confirmed!\nName: ${bookingData.full_name}\nPhone: ${bookingData.phone}\nReference: ${response.reference}\nArrival: ${bookingData.arrival_date}\nDeparture: ${bookingData.departure_date}`
+        );
+
+        setTimeout(() => {
+          window.location.href = "/thank-you";
+          window.open(`https://wa.me/2349161693006?text=${message}`, "_blank");
+        }, 500);
+      } else {
+        alert("⚠️ Payment received, but booking failed. Contact support.");
+      }
+    })
+    .catch(() => {
+      alert("❌ Payment succeeded, but server error occurred.");
+    });
+},
+
 
         onClose: function () {
           alert("⚠️ Payment window closed.");
