@@ -327,7 +327,8 @@ export default function BookByTypePage() {
               No rooms found for this type.
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
+
               {computedRooms.map((r) => (
                 <RoomCard
                   key={r.id}
@@ -463,31 +464,39 @@ function RoomCard({ room, selected, onToggle, hasDates }) {
       type="button"
       onClick={onToggle}
       disabled={!clickOk}
-      className={`group relative overflow-hidden rounded-xl border ${border} bg-white/5 p-4 text-left backdrop-blur-sm transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60`}
+      className={`group relative overflow-hidden rounded-xl border ${border} bg-white/5 p-3 text-left backdrop-blur-sm transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60`}
     >
-      <div className="mb-2 flex items-center justify-between">
-        <div>
-          <div className="text-sm opacity-70">Room</div>
-          <div className="text-xl font-extrabold">#{room_number}</div>
-          {floor && <div className="text-xs opacity-70">Floor: {floor}</div>}
-        </div>
-
-        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold text-white ${chip.bg}`}>{chip.text}</span>
-      </div>
-
+      {/* selection check */}
       {selected && (
-        <div className="absolute right-3 top-3 rounded-full bg-emerald-600/90 p-1.5 shadow">
+        <div className="absolute right-2.5 top-2.5 rounded-full bg-emerald-600/90 p-1.5 shadow">
           <FiCheckCircle />
         </div>
       )}
 
-      <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/5 blur-2xl" />
+      {/* subtle glow */}
+      <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/5 blur-2xl" />
 
-      {!hasDates && (
-        <div className="mt-3 flex items-center gap-2 text-xs opacity-70">
-          <FiClock /> Select arrival & departure to activate rooms
+      {/* CONTENT: number on top, status at bottom */}
+      <div className="flex h-full flex-col justify-between">
+        <div>
+          {/* 👇 ONLY number (remove the word “Room” & the # symbol) */}
+          <div className="text-2xl font-extrabold leading-none">{room_number}</div>
+          {/* Optional: show floor in tiny text (remove if you want tighter cards) */}
+          {floor && <div className="mt-1 text-[11px] opacity-60">Floor {floor}</div>}
         </div>
-      )}
+
+        <div className="mt-4">
+          <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold text-white ${chip.bg}`}>
+            {chip.text}
+          </span>
+        </div>
+
+        {!hasDates && (
+          <div className="mt-2 flex items-center gap-2 text-[11px] opacity-70">
+            <FiClock /> Select arrival & departure to activate rooms
+          </div>
+        )}
+      </div>
     </button>
   );
 }
