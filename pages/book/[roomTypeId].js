@@ -5,13 +5,13 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import axios from "axios";
 import dayjs from "dayjs";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ActivityWave from "@/components/ActivityWave";
-import { FiArrowLeft, FiClock, FiCheckCircle } from "react-icons/fi";
+import { FiArrowLeft, FiClock, FiCheckCircle, FiShoppingCart, FiX, FiTrash2, FiCamera } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STATUS = {
@@ -62,9 +62,12 @@ export default function BookByTypePage() {
     return () => clearInterval(t);
   }, []);
 
-  // Guest modal
+  // Guest modal + selfie
   const [guestOpen, setGuestOpen] = useState(false);
-  const [guest, setGuest] = useState({ full_name: "", phone: "", email: "" });
+  const [guest, setGuest] = useState({ full_name: "", phone: "", email: "", captured_image: "" });
+
+  // Mobile tray
+  const [trayOpen, setTrayOpen] = useState(false);
 
   // 1) Fetch all rooms for this type
   useEffect(() => {
@@ -171,6 +174,9 @@ export default function BookByTypePage() {
     if (roomStatus !== STATUS.AVAILABLE) return;
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
+  function removeSelected(id) {
+    setSelectedIds((prev) => prev.filter((x) => x !== id));
+  }
 
   function openGuestForm() {
     if (!hasDates) return toast.error("Select arrival and departure.");
@@ -193,7 +199,7 @@ export default function BookByTypePage() {
       arrival_date: dayjs(arrival).format("YYYY-MM-DD"),
       departure_date: dayjs(departure).format("YYYY-MM-DD"),
       total_amount: total,
-      captured_image: "",
+      captured_image: guest.captured_image || "",
       room_id: roomIdsInt[0] || null,
       room_ids: roomIdsInt,
       booking_date: new Date().toISOString().slice(0, 10),
@@ -219,12 +225,17 @@ export default function BookByTypePage() {
     ];
   }, [roomTypeName]);
 
-  // Map id → room for summary
+  // Map id → room for summary/tray
   const roomsById = useMemo(() => {
     const m = new Map();
     rooms.forEach((r) => m.set(String(r.id), r));
     return m;
   }, [rooms]);
+
+  const selectedRoomObjs = useMemo(
+    () => selectedIds.map((id) => roomsById.get(id)).filter(Boolean),
+    [selectedIds, roomsById]
+  );
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -240,7 +251,7 @@ export default function BookByTypePage() {
         />
       </div>
 
-      <div className="relative z-10 -mt-10 mx-auto max-w-7xl px-4 pb-16">
+      <div className="relative z-10 -mt-10 mx-auto max-w-7xl px-4 pb-24">
         {/* Back */}
         <div className="mb-6">
           <Link
@@ -303,7 +314,7 @@ export default function BookByTypePage() {
           </div>
         </div>
 
-        {/* Rooms grid */}
+        {/* Rooms grid (➡️ up to 6 per row on XXL) */}
         <section className="mb-8">
           <div className="mb-3 flex items-center gap-2">
             <h2 className="text-xl font-bold">Rooms</h2>
@@ -316,7 +327,7 @@ export default function BookByTypePage() {
               No rooms found for this type.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
               {computedRooms.map((r) => (
                 <RoomCard
                   key={r.id}
@@ -330,8 +341,8 @@ export default function BookByTypePage() {
           )}
         </section>
 
-        {/* Summary + Proceed */}
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+        {/* Desktop Summary + Proceed */}
+        <div className="hidden md:block rounded-xl border border-white/10 bg-white/5 p-4">
           <div className="grid gap-3 sm:grid-cols-4">
             <SummaryItem label="Rooms selected" value={selectedIds.length} />
             <SummaryItem label="Nights" value={nights} />
@@ -356,13 +367,45 @@ export default function BookByTypePage() {
         </div>
       </div>
 
-      {/* Guest details popup */}
+      {/* MOBILE: Floating Tray Button */}
+      <button
+        onClick={() => setTrayOpen(true)}
+        className="md:hidden fixed bottom-5 right-5 z-50 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg px-4 py-3 flex items-center gap-2"
+        aria-label="Open booking tray"
+      >
+        <FiShoppingCart />
+        <span className="text-sm font-semibold">Tray</span>
+        {selectedIds.length > 0 && (
+          <span className="ml-1 inline-flex items-center justify-center rounded-full bg-white text-emerald-700 text-xs font-bold w-6 h-6">
+            {selectedIds.length}
+          </span>
+        )}
+      </button>
+
+      {/* MOBILE: Tray Drawer */}
+      <MobileTrayDrawer
+        open={trayOpen}
+        onClose={() => setTrayOpen(false)}
+        selectedRooms={selectedRoomObjs}
+        nights={nights}
+        pricePerNight={pricePerNight}
+        total={total}
+        arrivalDate={arrival ? dayjs(arrival).format("YYYY-MM-DD") : ""}
+        departureDate={departure ? dayjs(departure).format("YYYY-MM-DD") : ""}
+        onRemoveRoom={(id) => removeSelected(String(id))}
+        onProceed={() => {
+          setTrayOpen(false);
+          openGuestForm();
+        }}
+      />
+
+      {/* Guest details popup (with selfie capture) */}
       <GuestDetailsModal
         open={guestOpen}
         onClose={() => setGuestOpen(false)}
         guest={guest}
         setGuest={setGuest}
-        selectedRooms={selectedIds.map((id) => roomsById.get(id))}
+        selectedRooms={selectedRoomObjs}
         nights={nights}
         pricePerNight={pricePerNight}
         total={total}
@@ -462,6 +505,21 @@ function GuestDetailsModal({
   departureDate,
   onConfirm,
 }) {
+  const fileRef = useRef(null);
+
+  function onPickSelfie() {
+    fileRef.current?.click();
+  }
+  function onFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setGuest((g) => ({ ...g, captured_image: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  }
+
   return (
     <AnimatePresence>
       {open && (
@@ -474,7 +532,7 @@ function GuestDetailsModal({
             onClick={onClose}
           />
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-[95] max-h-[85vh] overflow-auto rounded-t-2xl bg-white text-black shadow-2xl sm:inset-y-0 sm:my-auto sm:mx-auto sm:h-auto sm:max-w-lg sm:rounded-2xl"
+            className="fixed inset-x-0 bottom-0 z-[95] max-h-[90vh] overflow-auto rounded-t-2xl bg-white text-black shadow-2xl sm:inset-y-0 sm:my-auto sm:mx-auto sm:h-auto sm:max-w-lg sm:rounded-2xl"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -482,7 +540,7 @@ function GuestDetailsModal({
           >
             <div className="border-b p-4">
               <h3 className="text-lg font-semibold">Guest Details & Summary</h3>
-              <p className="text-xs text-black/60">Confirm your info before payment.</p>
+              <p className="text-xs text-black/60">Optionally capture a selfie for faster check-in.</p>
             </div>
 
             <form onSubmit={onConfirm} className="p-4 space-y-4">
@@ -507,6 +565,47 @@ function GuestDetailsModal({
                   onChange={(e) => setGuest((g) => ({ ...g, email: e.target.value }))}
                   className="w-full rounded-md border px-3 py-2"
                 />
+
+                {/* Selfie capture */}
+                <div className="rounded-md border p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-sm font-medium">Capture Face (optional)</div>
+                    {guest.captured_image ? (
+                      <button
+                        type="button"
+                        onClick={() => setGuest((g) => ({ ...g, captured_image: "" }))}
+                        className="text-red-600 text-xs hover:underline"
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {guest.captured_image ? (
+                    <img
+                      src={guest.captured_image}
+                      alt="Captured"
+                      className="h-24 w-24 rounded object-cover border"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={onPickSelfie}
+                      className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-white hover:bg-slate-800"
+                    >
+                      <FiCamera /> Use Camera
+                    </button>
+                  )}
+
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    capture="user"
+                    className="hidden"
+                    onChange={onFileChange}
+                  />
+                </div>
               </div>
 
               <div className="rounded-lg border bg-black/5 p-3 text-sm">
@@ -556,7 +655,10 @@ function GuestDetailsModal({
                 <button type="button" onClick={onClose} className="rounded-md border px-4 py-2 hover:bg-black/5">
                   Cancel
                 </button>
-                <button type="submit" className="rounded-md bg-emerald-600 px-5 py-2 font-semibold text-white hover:bg-emerald-700">
+                <button
+                  type="submit"
+                  className="rounded-md bg-emerald-600 px-5 py-2 font-semibold text-white hover:bg-emerald-700"
+                >
                   Proceed to Payment
                 </button>
               </div>
@@ -564,6 +666,113 @@ function GuestDetailsModal({
 
             <div className="border-t p-3 text-center text-xs text-black/60">
               You’ll complete payment on the next screen.
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function MobileTrayDrawer({
+  open,
+  onClose,
+  selectedRooms,
+  nights,
+  pricePerNight,
+  total,
+  arrivalDate,
+  departureDate,
+  onRemoveRoom,
+  onProceed,
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            className="fixed inset-0 z-[90] bg-black/60"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+          />
+          <motion.div
+            className="fixed inset-x-0 bottom-0 z-[95] rounded-t-2xl bg-white text-black shadow-2xl"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "tween", duration: 0.25 }}
+          >
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="font-semibold">Booking Tray</div>
+              <button onClick={onClose} className="p-1 rounded hover:bg-black/5">
+                <FiX />
+              </button>
+            </div>
+
+            <div className="max-h-[55vh] overflow-auto p-4">
+              {selectedRooms.length === 0 ? (
+                <div className="text-sm text-black/70">No rooms selected yet.</div>
+              ) : (
+                <div className="space-y-3">
+                  {selectedRooms.map((r) => (
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between gap-3 border-b border-black/10 pb-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">Room #{r.room_number}</div>
+                        <div className="text-xs text-black/60">
+                          ₦{Number(pricePerNight || 0).toLocaleString("en-NG")} / night
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => onRemoveRoom(r.id)}
+                        className="p-1 rounded border border-black/20 hover:bg-black/5 text-red-500"
+                        aria-label="Remove room"
+                      >
+                        <FiTrash2 />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <div className="opacity-70">Arrival</div>
+                  <div className="font-semibold">{arrivalDate || "-"}</div>
+                </div>
+                <div>
+                  <div className="opacity-70">Departure</div>
+                  <div className="font-semibold">{departureDate || "-"}</div>
+                </div>
+                <div>
+                  <div className="opacity-70">Nights</div>
+                  <div className="font-semibold">{nights}</div>
+                </div>
+                <div>
+                  <div className="opacity-70">Rooms</div>
+                  <div className="font-semibold">{selectedRooms.length}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="font-semibold">Total</div>
+                <div className="font-bold text-emerald-600">
+                  ₦{Number(total || 0).toLocaleString("en-NG")}
+                </div>
+              </div>
+              <button
+                onClick={onProceed}
+                disabled={selectedRooms.length === 0 || total <= 0}
+                className="w-full py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-semibold disabled:opacity-50"
+              >
+                Proceed
+              </button>
             </div>
           </motion.div>
         </>
