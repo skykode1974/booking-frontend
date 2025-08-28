@@ -53,3 +53,41 @@ export async function fetchOccupancyByRoom() {
     return new Map(); // never throw; UI keeps working
   }
 }
+
+// /services/roomsApi.js
+export async function fetchUnavailableByRoom({ roomTypeId, from, to, businessId }) {
+  try {
+    const params = new URLSearchParams();
+    if (roomTypeId) params.set("room_type_id", String(roomTypeId));
+    if (from) params.set("from", from); // "YYYY-MM-DD"
+    if (to) params.set("to", to);       // "YYYY-MM-DD"
+    if (businessId) params.set("business_id", String(businessId));
+
+    const url = `/api/hms/unavailable/by-room?${params.toString()}`;
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+
+    const map = new Map();
+    const rows = Array.isArray(json?.data) ? json.data : [];
+    rows.forEach((row) => {
+      const id = String(row.room_id ?? row.hms_rooms_id ?? "").trim();
+      if (!id) return;
+      const item = {
+        from: row.date_from ?? null,
+        to: row.date_to ?? null,
+        // we don't rely on type value; any row means “block”
+        type: row.unavailable_type ?? "unavailable",
+      };
+      if (!map.has(id)) map.set(id, []);
+      map.get(id).push(item);
+    });
+
+    // quick debug:
+    console.log("[MAINT] fetched map size:", map.size, map);
+    return map;
+  } catch (e) {
+    console.warn("fetchUnavailableByRoom failed:", e?.message || e);
+    return new Map();
+  }
+}

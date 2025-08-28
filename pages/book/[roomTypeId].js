@@ -22,8 +22,27 @@ import { computeRooms } from "../../utils/availability";
 import {
   fetchAvailableRooms,
   fetchRoomsByType,
-  fetchOccupancyByRoom, // ✅ correct name
+  fetchOccupancyByRoom,
+  // NEW:
+  fetchUnavailableByRoom,
 } from "../../services/roomsApi";
+
+// helper: meaningless live statuses
+const isMeaninglessStatus = (s) => {
+  const n = String(s || "").trim().toLowerCase();
+  return !n || n === "vacant" || n === "available" || n === "free";
+};
+const pickLiveStatus = (live) =>
+  live?.status ??
+  live?.transaction_status ??
+  live?.booking_status ??
+  live?.state ??
+  live?.status_name ??
+  live?.statusName ??
+  live?.bookingStatus ??
+  null;
+const pickLivePayment = (live) =>
+  live?.payment_status ?? live?.paymentStatus ?? live?.pay_status ?? null;
 
 export default function BookByTypePage() {
   const router = useRouter();
@@ -42,6 +61,9 @@ export default function BookByTypePage() {
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [availableIds, setAvailableIds] = useState(new Set());
   const [fetchingAvail, setFetchingAvail] = useState(false);
+
+  // NEW: maintenance windows by room
+  const [unavailMap, setUnavailMap] = useState(new Map());
 
   // Live occupancy map (room_id -> { dep_iso, sec_left, status })
   const [occMap, setOccMap] = useState(new Map());
@@ -97,9 +119,18 @@ export default function BookByTypePage() {
         }
 
         const merged = normalized.map((r) => {
-          const live = byId.get(String(r.id));
+          const live = byId.get(String(r.id)) ?? byId.get(Number(r.id)) ?? null;
           if (!live) return r;
+
           const liveDepMs = live.dep_iso ? Date.parse(live.dep_iso) : null;
+          const liveStatus = pickLiveStatus(live);
+          const livePayment = pickLivePayment(live);
+
+          const admin_status =
+            r.admin_status ??
+            (!isMeaninglessStatus(liveStatus) ? liveStatus : null) ??
+            null;
+
           return {
             ...r,
             departure_at_raw:
@@ -111,6 +142,10 @@ export default function BookByTypePage() {
             _live_departure_ms: liveDepMs,
             _live_secs_left:
               typeof live.sec_left === "number" ? live.sec_left : null,
+
+            admin_status,
+            payment_status: livePayment ?? r.payment_status ?? null,
+            _occ_status: liveStatus || null,
           };
         });
 
@@ -133,15 +168,36 @@ export default function BookByTypePage() {
         const ids = await fetchAvailableRooms({ arrival, departure, roomTypeId });
         setAvailableIds(ids);
         setSelectedIds([]);
+
+        // NEW: also fetch maintenance windows overlapped with the selection
+        const from = dayjs(arrival).format("YYYY-MM-DD");
+        const to = dayjs(departure).format("YYYY-MM-DD");
+        const map = await fetchUnavailableByRoom({ roomTypeId, from, to });
+        setUnavailMap(map);
       } catch (e) {
         console.error(e);
         toast.error("Could not load availability. Try another date range.");
         setAvailableIds(new Set());
+        setUnavailMap(new Map());
       } finally {
         setFetchingAvail(false);
       }
     })();
   }, [hasDates, arrival, departure, roomTypeId]);
+
+  // 2b) when no dates picked, still fetch "active now" maintenance windows
+  useEffect(() => {
+    if (hasDates || !roomTypeId) return;
+    (async () => {
+      try {
+        const today = dayjs().format("YYYY-MM-DD");
+        const map = await fetchUnavailableByRoom({ roomTypeId, from: today, to: today });
+        setUnavailMap(map);
+      } catch {
+        setUnavailMap(new Map());
+      }
+    })();
+  }, [hasDates, roomTypeId]);
 
   // 3) poll backend occupancy to refresh remaining seconds & departures
   useEffect(() => {
@@ -152,20 +208,32 @@ export default function BookByTypePage() {
         setOccMap(byId);
         setRooms((prev) =>
           prev.map((r) => {
-            const live = byId.get(String(r.id));
+            const live = byId.get(String(r.id)) ?? byId.get(Number(r.id)) ?? null;
             if (!live) return r;
+
             const liveDepMs = live.dep_iso ? Date.parse(live.dep_iso) : null;
+            const liveStatus = pickLiveStatus(live);
+            const livePayment = pickLivePayment(live);
+
+            const admin_status =
+              r.admin_status ??
+              (!isMeaninglessStatus(liveStatus) ? liveStatus : null) ??
+              null;
+
             return {
               ...r,
               departure_at_raw: live.dep_iso || r.departure_at_raw,
               _live_departure_ms: liveDepMs,
               _live_secs_left:
                 typeof live.sec_left === "number" ? live.sec_left : null,
+
+              admin_status,
+              payment_status: livePayment ?? r.payment_status ?? null,
+              _occ_status: liveStatus || null,
             };
           })
         );
       } catch (e) {
-        // silent fail; keep UI running
         console.warn("occupancy poll failed", e?.message || e);
       }
     };
@@ -174,19 +242,21 @@ export default function BookByTypePage() {
     return () => clearInterval(timer);
   }, []);
 
-  // compute statuses
-  const computedRooms = useMemo(
-    () =>
-      computeRooms({
-        rooms,
-        hasDates,
-        availableIds,
-        now,
-        arrival,
-        departure,
-      }),
-    [rooms, hasDates, availableIds, now, arrival, departure]
-  );
+  // compute statuses (now honors maintenance windows)
+ const computedRooms = useMemo(
+  () =>
+    computeRooms({
+      rooms,
+      hasDates,
+      availableIds,
+      now,
+      arrival,
+      departure,
+      unavailableMap: unavailMap, // <-- THIS must be here
+    }),
+  [rooms, hasDates, availableIds, now, arrival, departure, unavailMap]
+);
+
 
   // totals
   const nights = useMemo(
@@ -290,6 +360,9 @@ export default function BookByTypePage() {
             <LegendPill color="bg-emerald-500/90" label="Available" />
             <LegendPill color="bg-rose-500/90" label="Occupied" />
             <LegendPill color="bg-sky-500/90" label="Cleaning" />
+            <LegendPill color="bg-amber-500/90" label="Pending" />
+            {/* NEW: Maintenance legend */}
+            <LegendPill color="bg-violet-500/90" label="Maintenance" />
             <LegendPill color="bg-slate-600/90" label="Pick dates first" />
           </div>
         </div>
