@@ -1,7 +1,7 @@
 // /utils/availability.js
 import dayjs from "dayjs";
 import { parseToMs } from "./datetime";
-import { STATUS, normalizeAdmin } from "./status";
+import { STATUS, normalizeAdmin, ADMIN_STATUS } from "./status";
 
 const FENCE_MINUTES = 30;
 const CHECKIN_HOUR = 12;
@@ -10,6 +10,8 @@ const CHECKIN_MINUTE = 0;
 const isMeaningfulAdmin = (s) => {
   const n = String(s || "").toLowerCase();
   return (
+    n.includes("await") ||
+    n.includes("hold") ||
     n.includes("pending") ||
     n.includes("confirm") ||
     n.includes("cancel") ||
@@ -29,7 +31,7 @@ const pickAdminStatus = (room = {}) =>
   room.statusName ??
   null;
 
-// Day-level inclusive overlap using millisecond comparisons (no plugins)
+// Day-level inclusive overlap
 function overlapsRange(arrival, departure, winFrom, winTo) {
   if (!winFrom || !winTo || !arrival || !departure) return false;
   const aStart = dayjs(arrival).startOf("day").valueOf();
@@ -47,6 +49,7 @@ export function computeRooms({
   arrival,
   departure,
   unavailableMap = new Map(), // Map<roomId, [{from,to,type}]>
+  onlineHoldSet = new Set(),   // Set<roomId>
 }) {
   const toMs = (ts) => {
     const v = parseToMs(ts);
@@ -61,10 +64,9 @@ export function computeRooms({
   return rooms.map((r) => {
     const roomIdStr = String(r.id);
 
-    // ===== (A) MAINTENANCE ALWAYS WINS =====
+    // ===== A) MAINTENANCE ALWAYS WINS =====
     const ranges = unavailableMap.get(roomIdStr) || unavailableMap.get(r.id) || [];
 
-    // "today inside window" check without plugins
     const hasMaintNow =
       !hasDates &&
       ranges.some((w) => {
@@ -79,11 +81,9 @@ export function computeRooms({
       hasDates &&
       ranges.some((w) => overlapsRange(arrival, departure, w?.from, w?.to));
 
-    // ALSO: if backend already tagged this room as "maintenance"
     const backendSaysMaint = String(r.status || "").toLowerCase() === "maintenance";
 
     if (hasMaintNow || hasMaintForSelection || backendSaysMaint) {
-      // Optional remaining time until maintenance end (only when "now" inside)
       let remain = 0;
       if (hasMaintNow) {
         const ends = ranges
@@ -96,30 +96,36 @@ export function computeRooms({
       return { ...r, status: STATUS.MAINTENANCE, remaining_ms: remain };
     }
 
-    // ===== (B) ADMIN/TRANSACTION STATUSES =====
+    // ===== B) ONLINE HOLD (Awaiting confirmation) =====
+    const isOnlineHold = hasDates && (onlineHoldSet.has(r.id) || onlineHoldSet.has(roomIdStr));
+    if (isOnlineHold) {
+      // Show blue & block booking
+      const withAdmin = r.admin_status ? r.admin_status : "Online Hold";
+      return { ...r, status: STATUS.ONLINE_HOLD, remaining_ms: 0, admin_status: withAdmin };
+    }
+
+    // ===== C) ADMIN/TRANSACTION STATUSES =====
     const rawAdmin = pickAdminStatus(r);
     const adminNorm = normalizeAdmin(rawAdmin || "");
 
-    if (adminNorm === "CONFIRMED") {
+    if (adminNorm === ADMIN_STATUS.CONFIRMED) {
       const bookingEndMs = toMs(
         r.departure_at_raw || r._live_departure_ms || r.next_checkout_at || r.check_out
       );
       const msLeft = bookingEndMs > nowMs ? bookingEndMs - nowMs : 0;
       return { ...r, status: STATUS.OCCUPIED, remaining_ms: msLeft };
     }
-    if (adminNorm === "PENDING") {
+    if (adminNorm === ADMIN_STATUS.PENDING) {
       return { ...r, status: STATUS.PENDING, remaining_ms: 0 };
     }
-    if (adminNorm === "CLEANING") {
+    if (adminNorm === ADMIN_STATUS.CLEANING) {
       const cleanMs = toMs(r.cleaning_until_raw || r.cleaning_until);
       const msLeft = cleanMs > nowMs ? cleanMs - nowMs : 0;
       return { ...r, status: STATUS.CLEANING, remaining_ms: msLeft };
     }
-    if (adminNorm === "CANCELLED" || adminNorm === "DEPARTURE") {
-      // fall through as AVAILABLE unless other time rules say otherwise
-    }
+    // CANCELLED/DEPARTURE → fall through
 
-    // ===== (C) TIME/AVAILABILITY FALLBACKS =====
+    // ===== D) TIME/AVAILABILITY FALLBACKS =====
     if (!hasDates) {
       return { ...r, status: STATUS.INACTIVE, remaining_ms: 0 };
     }

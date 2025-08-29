@@ -11,10 +11,12 @@ import {
 import { fmtSqlDateTime, formatMsLeft } from "../../utils/datetime";
 import useCountdown from "./useCountdown";
 
-// Consider only meaningful booking/admin strings from DB
+// Use an admin-like field if present; otherwise pick a meaningful status text
 const isMeaningfulAdmin = (s) => {
   const n = String(s || "").toLowerCase();
   return (
+    n.includes("await") ||
+    n.includes("hold") ||
     n.includes("pending") ||
     n.includes("confirm") ||
     n.includes("cancel") ||
@@ -24,7 +26,6 @@ const isMeaningfulAdmin = (s) => {
   );
 };
 
-// Pull admin-like value; if admin_status missing, use a meaningful `status`
 const pickRawAdmin = (room = {}) =>
   room.admin_status ??
   room.booking_status ??
@@ -36,10 +37,10 @@ const pickRawAdmin = (room = {}) =>
   null;
 
 export default function RoomCard({ room, selected, onToggle, hasDates }) {
-  // Upstream computeRooms decided base UI status
+  // Base (computed) UI status
   let uiStatus = room?.status || STATUS.INACTIVE;
 
-  // Safety: apply admin override if present
+  // Enforce admin override if present
   const rawAdmin = pickRawAdmin(room);
   const adminNorm = normalizeAdmin(rawAdmin || "");
   if (adminNorm === ADMIN_STATUS.PENDING) uiStatus = STATUS.PENDING;
@@ -48,8 +49,9 @@ export default function RoomCard({ room, selected, onToggle, hasDates }) {
   if (adminNorm === ADMIN_STATUS.DEPARTURE) uiStatus = STATUS.AVAILABLE;
   if (adminNorm === ADMIN_STATUS.CANCELLED) uiStatus = STATUS.AVAILABLE;
   if (adminNorm === ADMIN_STATUS.CONFIRMED) uiStatus = STATUS.OCCUPIED;
+  if (adminNorm === ADMIN_STATUS.ONLINE_HOLD) uiStatus = STATUS.ONLINE_HOLD; // ← NEW
 
-  // Countdown for occupied/cleaning
+  // Countdown where relevant
   const remaining_ms =
     Number.isFinite(room?.remaining_ms) && room.remaining_ms > 0
       ? room.remaining_ms
@@ -59,12 +61,10 @@ export default function RoomCard({ room, selected, onToggle, hasDates }) {
     remaining_ms > 0;
   const msLeft = useCountdown(remaining_ms, showCountdown);
 
-  // Dates for small text
   const depRaw =
     room?.departure_at_raw || room?.next_checkout_at || room?.check_out || null;
   const cleanRaw = room?.cleaning_until_raw || room?.cleaning_until || null;
 
-  // Visuals
   const meta = getUiPresentation(hasDates ? uiStatus : STATUS.INACTIVE, adminNorm);
   const clickOk = hasDates && uiStatus === STATUS.AVAILABLE;
   const handleClick = () => {
@@ -81,14 +81,12 @@ export default function RoomCard({ room, selected, onToggle, hasDates }) {
       disabled={!clickOk}
       className={`group relative overflow-hidden rounded-xl border border-white/10 ${meta.card} p-3 text-left backdrop-blur-sm transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60 ${meta.ring}`}
     >
-      {/* selected checkmark */}
       {selected && (
         <div className="absolute right-2.5 top-2.5 rounded-full bg-emerald-600/90 p-1.5 shadow">
           <FiCheckCircle />
         </div>
       )}
 
-      {/* tiny countdown when relevant */}
       {showCountdown && (
         <div
           className={`absolute left-2 top-2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
@@ -100,17 +98,14 @@ export default function RoomCard({ room, selected, onToggle, hasDates }) {
         </div>
       )}
 
-      {/* subtle glow */}
       <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/5 blur-2xl" />
 
-      {/* CONTENT */}
       <div className="flex h-full flex-col justify-between">
         <div>
           <div className="text-2xl font-extrabold leading-none">
             {displayRoom}
           </div>
 
-          {/* departure / cleaning info */}
           {depRaw && (
             <div className="mt-1 text-[11px] opacity-70">
               Departure: {fmtSqlDateTime(depRaw)}

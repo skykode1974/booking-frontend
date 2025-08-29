@@ -23,8 +23,8 @@ import {
   fetchAvailableRooms,
   fetchRoomsByType,
   fetchOccupancyByRoom,
-  // NEW:
   fetchUnavailableByRoom,
+  fetchOnlineHoldsByRoom,
 } from "../../services/roomsApi";
 
 // helper: meaningless live statuses
@@ -62,23 +62,26 @@ export default function BookByTypePage() {
   const [availableIds, setAvailableIds] = useState(new Set());
   const [fetchingAvail, setFetchingAvail] = useState(false);
 
-  // NEW: maintenance windows by room
+  // Maintenance windows by room
   const [unavailMap, setUnavailMap] = useState(new Map());
 
-  // Live occupancy map (room_id -> { dep_iso, sec_left, status })
+  // Online-hold set (Awaiting confirmation)
+  const [onlineHoldSet, setOnlineHoldSet] = useState(new Set());
+
+  // Live occupancy map
   const [occMap, setOccMap] = useState(new Map());
 
   // Selection
   const [selectedIds, setSelectedIds] = useState([]);
 
-  // live tick for countdowns
+  // live tick
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  // Guest modal + selfie (persist)
+  // Guest modal + selfie
   const [guestOpen, setGuestOpen] = useState(false);
   const [guest, setGuest] = useState({
     full_name: "",
@@ -101,22 +104,29 @@ export default function BookByTypePage() {
   // Mobile tray
   const [trayOpen, setTrayOpen] = useState(false);
 
-  // 1) fetch rooms + initial occupancy and merge
+  // 1) fetch rooms + initial occupancy and merge (ABORTABLE)
   useEffect(() => {
     if (!roomTypeId) return;
+    const ctrl = new AbortController();
+    const { signal } = ctrl;
+
     (async () => {
       setLoadingRooms(true);
       try {
-        const normalized = await fetchRoomsByType(roomTypeId);
+        const normalized = await fetchRoomsByType(roomTypeId, { signal });
 
         // load occupancy and merge
         let byId = new Map();
         try {
-          byId = await fetchOccupancyByRoom();
+          byId = await fetchOccupancyByRoom({ signal });
           setOccMap(byId);
         } catch (e) {
-          console.warn("occupancy fetch failed", e?.message || e);
+          if (e?.name !== "CanceledError") {
+            console.warn("occupancy fetch failed", e?.message || e);
+          }
         }
+
+        if (signal.aborted) return;
 
         const merged = normalized.map((r) => {
           const live = byId.get(String(r.id)) ?? byId.get(Number(r.id)) ?? null;
@@ -149,54 +159,85 @@ export default function BookByTypePage() {
           };
         });
 
-        setRooms(merged);
+        if (!signal.aborted) setRooms(merged);
       } catch (e) {
-        console.error(e);
-        toast.error("Could not load rooms for this type.");
+        if (e?.name !== "CanceledError") {
+          console.error(e);
+          toast.error("Could not load rooms for this type.");
+        }
       } finally {
-        setLoadingRooms(false);
+        if (!signal.aborted) setLoadingRooms(false);
       }
     })();
+
+    return () => ctrl.abort();
   }, [roomTypeId]);
 
-  // 2) fetch availability when dates picked
+  // 2) availability + maintenance + online holds when dates picked (PARALLEL + ABORT)
   useEffect(() => {
-    if (!hasDates || !roomTypeId) return;
+    if (!hasDates || !roomTypeId) {
+      setAvailableIds(new Set());
+      setUnavailMap(new Map());
+      setOnlineHoldSet(new Set());
+      return;
+    }
+
+    const ctrl = new AbortController();
+    const { signal } = ctrl;
+
     (async () => {
       setFetchingAvail(true);
       try {
-        const ids = await fetchAvailableRooms({ arrival, departure, roomTypeId });
-        setAvailableIds(ids);
-        setSelectedIds([]);
-
-        // NEW: also fetch maintenance windows overlapped with the selection
         const from = dayjs(arrival).format("YYYY-MM-DD");
         const to = dayjs(departure).format("YYYY-MM-DD");
-        const map = await fetchUnavailableByRoom({ roomTypeId, from, to });
+
+        const [ids, map, holds] = await Promise.all([
+          fetchAvailableRooms({ arrival, departure, roomTypeId, signal }),
+          fetchUnavailableByRoom({ roomTypeId, from, to, signal }),
+          fetchOnlineHoldsByRoom({ roomTypeId, from, to, signal }),
+        ]);
+
+        if (signal.aborted) return;
+
+        setAvailableIds(ids);
         setUnavailMap(map);
+        setOnlineHoldSet(holds);
+        setSelectedIds([]); // reset selection when range changes
       } catch (e) {
-        console.error(e);
-        toast.error("Could not load availability. Try another date range.");
-        setAvailableIds(new Set());
-        setUnavailMap(new Map());
+        if (e?.name !== "AbortError" && e?.name !== "CanceledError") {
+          console.error(e);
+          toast.error("Could not load availability. Try another date range.");
+          setAvailableIds(new Set());
+          setUnavailMap(new Map());
+          setOnlineHoldSet(new Set());
+        }
       } finally {
-        setFetchingAvail(false);
+        if (!signal.aborted) setFetchingAvail(false);
       }
     })();
+
+    return () => ctrl.abort();
   }, [hasDates, arrival, departure, roomTypeId]);
 
-  // 2b) when no dates picked, still fetch "active now" maintenance windows
+  // 2b) when no dates picked, still fetch "active now" maintenance (for purple)
   useEffect(() => {
     if (hasDates || !roomTypeId) return;
+    const ctrl = new AbortController();
+    const { signal } = ctrl;
+
     (async () => {
       try {
         const today = dayjs().format("YYYY-MM-DD");
-        const map = await fetchUnavailableByRoom({ roomTypeId, from: today, to: today });
-        setUnavailMap(map);
+        const map = await fetchUnavailableByRoom({ roomTypeId, from: today, to: today, signal });
+        if (!signal.aborted) setUnavailMap(map);
       } catch {
-        setUnavailMap(new Map());
+        if (!signal.aborted) setUnavailMap(new Map());
       }
+      // no online holds without dates – we only show them for a picked date range
+      if (!signal.aborted) setOnlineHoldSet(new Set());
     })();
+
+    return () => ctrl.abort();
   }, [hasDates, roomTypeId]);
 
   // 3) poll backend occupancy to refresh remaining seconds & departures
@@ -238,25 +279,25 @@ export default function BookByTypePage() {
       }
     };
     run();
-    timer = setInterval(run, 30_000); // every 30s
+    timer = setInterval(run, 30_000);
     return () => clearInterval(timer);
   }, []);
 
-  // compute statuses (now honors maintenance windows)
- const computedRooms = useMemo(
-  () =>
-    computeRooms({
-      rooms,
-      hasDates,
-      availableIds,
-      now,
-      arrival,
-      departure,
-      unavailableMap: unavailMap, // <-- THIS must be here
-    }),
-  [rooms, hasDates, availableIds, now, arrival, departure, unavailMap]
-);
-
+  // compute statuses (honors maintenance + online holds)
+  const computedRooms = useMemo(
+    () =>
+      computeRooms({
+        rooms,
+        hasDates,
+        availableIds,
+        now,
+        arrival,
+        departure,
+        unavailableMap: unavailMap,
+        onlineHoldSet,
+      }),
+    [rooms, hasDates, availableIds, now, arrival, departure, unavailMap, onlineHoldSet]
+  );
 
   // totals
   const nights = useMemo(
@@ -274,6 +315,7 @@ export default function BookByTypePage() {
   // helpers
   function toggleSelect(id, roomStatus) {
     if (!hasDates) return;
+    if (fetchingAvail) return; // block clicks during refresh
     if (roomStatus !== STATUS.AVAILABLE) return;
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -361,7 +403,7 @@ export default function BookByTypePage() {
             <LegendPill color="bg-rose-500/90" label="Occupied" />
             <LegendPill color="bg-sky-500/90" label="Cleaning" />
             <LegendPill color="bg-amber-500/90" label="Pending" />
-            {/* NEW: Maintenance legend */}
+            <LegendPill color="bg-blue-500/90" label="Awaiting confirmation" />
             <LegendPill color="bg-violet-500/90" label="Maintenance" />
             <LegendPill color="bg-slate-600/90" label="Pick dates first" />
           </div>
@@ -427,7 +469,11 @@ export default function BookByTypePage() {
               No rooms found for this type.
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
+            <div
+              className={`grid grid-cols-3 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 ${
+                fetchingAvail ? "opacity-60 pointer-events-none" : ""
+              }`}
+            >
               {computedRooms.map((r) => (
                 <RoomCard
                   key={r.id}
@@ -463,7 +509,7 @@ export default function BookByTypePage() {
             </p>
             <button
               onClick={openGuestForm}
-              disabled={!hasDates || selectedIds.length === 0 || total <= 0}
+              disabled={fetchingAvail || !hasDates || selectedIds.length === 0 || total <= 0}
               className="rounded-md bg-emerald-600 px-5 py-2 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
             >
               Proceed
