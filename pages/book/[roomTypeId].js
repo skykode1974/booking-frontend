@@ -81,6 +81,15 @@ export default function BookByTypePage() {
     return () => clearInterval(t);
   }, []);
 
+  // Mobile check for portal behavior
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   // Guest modal + selfie
   const [guestOpen, setGuestOpen] = useState(false);
   const [guest, setGuest] = useState({
@@ -233,7 +242,6 @@ export default function BookByTypePage() {
       } catch {
         if (!signal.aborted) setUnavailMap(new Map());
       }
-      // no online holds without dates – we only show them for a picked date range
       if (!signal.aborted) setOnlineHoldSet(new Set());
     })();
 
@@ -414,27 +422,39 @@ export default function BookByTypePage() {
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div>
             <label className="mb-1 block text-sm opacity-80">Arrival</label>
-            <DatePicker
-              selected={arrival}
-              onChange={setArrival}
-              placeholderText="Select arrival"
-              className="w-full rounded-md border border-blue-400 bg-slate-900 px-3 py-2 placeholder:text-slate-400"
-              calendarClassName="custom-datepicker"
-              dateFormat="yyyy-MM-dd"
-              minDate={new Date()}
-            />
+            {/* Arrival */}
+<DatePicker
+  selected={arrival}
+  onChange={setArrival}
+  placeholderText="Select arrival"
+  className="w-full rounded-md border border-blue-400 bg-slate-900 px-3 py-2 placeholder:text-slate-400"
+  calendarClassName="custom-datepicker"
+  dateFormat="yyyy-MM-dd"
+  minDate={new Date()}
+  withPortal={isMobile}           // mobile overlay = no edge clipping
+  shouldCloseOnSelect
+  showPopperArrow={false}
+  fixedHeight
+  monthsShown={1}
+/>
           </div>
           <div>
             <label className="mb-1 block text-sm opacity-80">Departure</label>
-            <DatePicker
-              selected={departure}
-              onChange={setDeparture}
-              placeholderText="Select departure"
-              className="w-full rounded-md border border-blue-400 bg-slate-900 px-3 py-2 placeholder:text-slate-400"
-              calendarClassName="custom-datepicker"
-              dateFormat="yyyy-MM-dd"
-              minDate={arrival || new Date()}
-            />
+            {/* Departure */}
+<DatePicker
+  selected={departure}
+  onChange={setDeparture}
+  placeholderText="Select departure"
+  className="w-full rounded-md border border-blue-400 bg-slate-900 px-3 py-2 placeholder:text-slate-400"
+  calendarClassName="custom-datepicker"
+  dateFormat="yyyy-MM-dd"
+  minDate={arrival || new Date()}
+  withPortal={isMobile}           // mobile overlay = no edge clipping
+  shouldCloseOnSelect
+  showPopperArrow={false}
+  fixedHeight
+  monthsShown={1}
+/>
           </div>
 
           {/* Price card */}
@@ -583,6 +603,20 @@ export default function BookByTypePage() {
         departureDate={departure ? dayjs(departure).format("YYYY-MM-DD") : ""}
         onConfirm={confirmGuestAndPay}
       />
+
+      {/* Global tweak for datepicker overlay */}
+      <style jsx global>{`
+        .react-datepicker-popper { z-index: 50; }
+        .react-datepicker__portal { z-index: 60; background: rgba(2, 6, 23, 0.55); }
+        @media (max-width: 767px) {
+          .react-datepicker__portal .react-datepicker {
+            width: 100vw;
+            max-width: 100vw;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+          }
+        }
+      `}</style>
     </main>
   );
 }

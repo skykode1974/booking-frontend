@@ -126,7 +126,7 @@ export default function RoomCard({ room, selected, onToggle, hasDates }) {
 
         {!hasDates && (
           <div className="mt-2 flex items-center gap-2 text-[11px] opacity-70">
-            <FiClock /> Select arrival &amp; departure to activate rooms
+            <FiClock /> Select date to activate rooms
           </div>
         )}
       </div>
