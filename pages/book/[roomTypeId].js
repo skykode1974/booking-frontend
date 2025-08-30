@@ -390,9 +390,10 @@ export default function BookByTypePage() {
 
         {/* Header */}
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
+          {/* Hide title+subtitle on mobile, keep on desktop */}
+          <div className="hidden md:block">
             <h1 className="text-3xl font-extrabold">
-              {roomTypeName || "Room Booking"}
+              {roomTypeName || "Room Booking"} Rooms
             </h1>
             <p className="opacity-80">
               Select your dates to see live available room(s).
@@ -435,11 +436,30 @@ export default function BookByTypePage() {
               minDate={arrival || new Date()}
             />
           </div>
+
+          {/* Price card */}
           <div className="rounded-lg border border-white/10 bg-white/5 p-3 col-span-2 sm:col-span-1">
-            <div className="text-sm opacity-80">Per night</div>
-            <div className="text-2xl font-extrabold text-emerald-400">
-              ₦{Number(pricePerNight || 0).toLocaleString("en-NG")}
+            {/* MOBILE: room type + price side-by-side */}
+            <div className="md:hidden flex items-baseline justify-between gap-2 mb-1">
+              <div className="text-base font-bold truncate">
+                {roomTypeName || "Room Booking"} Rooms
+              </div>
+              <div className="text-xl font-extrabold text-emerald-400">
+                ₦{Number(pricePerNight || 0).toLocaleString("en-NG")}
+              </div>
             </div>
+            {/* MOBILE hint */}
+            <div className="md:hidden text-[11px] opacity-70 mb-2">Per night</div>
+
+            {/* DESKTOP: stacked */}
+            <div className="hidden md:block">
+              <div className="text-sm opacity-80">Per night</div>
+              <div className="text-2xl font-extrabold text-emerald-400">
+                ₦{Number(pricePerNight || 0).toLocaleString("en-NG")}
+              </div>
+            </div>
+
+            {/* Meta (both) */}
             <div className="text-xs opacity-70">
               {nights} night(s) • {selectedIds.length} room(s)
             </div>
@@ -450,7 +470,7 @@ export default function BookByTypePage() {
         <section className="mb-8">
           <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold">Rooms</h2>
+              
               {loadingRooms && (
                 <span className="text-xs opacity-70">loading…</span>
               )}
@@ -458,10 +478,7 @@ export default function BookByTypePage() {
                 <span className="text-xs opacity-70">checking availability…</span>
               )}
             </div>
-            <div className="text-[11px] opacity-70">
-              Occupied/Cleaning rooms show{" "}
-              <span className="font-semibold">Departure</span> inside the card.
-            </div>
+            {/* Helper text removed */}
           </div>
 
           {rooms.length === 0 ? (
@@ -509,7 +526,9 @@ export default function BookByTypePage() {
             </p>
             <button
               onClick={openGuestForm}
-              disabled={fetchingAvail || !hasDates || selectedIds.length === 0 || total <= 0}
+              disabled={
+                fetchingAvail || !hasDates || selectedIds.length === 0 || total <= 0
+              }
               className="rounded-md bg-emerald-600 px-5 py-2 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
             >
               Proceed
