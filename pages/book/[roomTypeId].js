@@ -81,10 +81,10 @@ export default function BookByTypePage() {
     return () => clearInterval(t);
   }, []);
 
-  // Mobile check for portal behavior
+  // Mobile check for portal behavior (prevents edge clipping)
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const update = () => setIsMobile(window.innerWidth < 768);
+    const update = () => setIsMobile(typeof window !== "undefined" && window.innerWidth < 768);
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -422,66 +422,65 @@ export default function BookByTypePage() {
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div>
             <label className="mb-1 block text-sm opacity-80">Arrival</label>
-            {/* Arrival */}
-<DatePicker
-  selected={arrival}
-  onChange={setArrival}
-  placeholderText="Select arrival"
-  className="w-full rounded-md border border-blue-400 bg-slate-900 px-3 py-2 placeholder:text-slate-400"
-  calendarClassName="custom-datepicker"
-  dateFormat="yyyy-MM-dd"
-  minDate={new Date()}
-  withPortal={isMobile}           // mobile overlay = no edge clipping
-  shouldCloseOnSelect
-  showPopperArrow={false}
-  fixedHeight
-  monthsShown={1}
-/>
+            <DatePicker
+              selected={arrival}
+              onChange={setArrival}
+              placeholderText="Select arrival"
+              className="w-full rounded-md border border-blue-400 bg-slate-900 px-3 py-2 placeholder:text-slate-400"
+              calendarClassName="custom-datepicker"
+              dateFormat="yyyy-MM-dd"
+              minDate={new Date()}
+              withPortal={isMobile}
+              shouldCloseOnSelect
+              showPopperArrow={false}
+              fixedHeight
+              monthsShown={1}
+            />
           </div>
           <div>
             <label className="mb-1 block text-sm opacity-80">Departure</label>
-            {/* Departure */}
-<DatePicker
-  selected={departure}
-  onChange={setDeparture}
-  placeholderText="Select departure"
-  className="w-full rounded-md border border-blue-400 bg-slate-900 px-3 py-2 placeholder:text-slate-400"
-  calendarClassName="custom-datepicker"
-  dateFormat="yyyy-MM-dd"
-  minDate={arrival || new Date()}
-  withPortal={isMobile}           // mobile overlay = no edge clipping
-  shouldCloseOnSelect
-  showPopperArrow={false}
-  fixedHeight
-  monthsShown={1}
-/>
+            <DatePicker
+              selected={departure}
+              onChange={setDeparture}
+              placeholderText="Select departure"
+              className="w-full rounded-md border border-blue-400 bg-slate-900 px-3 py-2 placeholder:text-slate-400"
+              calendarClassName="custom-datepicker"
+              dateFormat="yyyy-MM-dd"
+              minDate={arrival || new Date()}
+              withPortal={isMobile}
+              shouldCloseOnSelect
+              showPopperArrow={false}
+              fixedHeight
+              monthsShown={1}
+            />
           </div>
 
           {/* Price card */}
           <div className="rounded-lg border border-white/10 bg-white/5 p-3 col-span-2 sm:col-span-1">
-            {/* MOBILE: room type + price side-by-side */}
-            <div className="md:hidden flex items-baseline justify-between gap-2 mb-1">
+            {/* MOBILE: room type then "₦… Per night" (counts hidden) */}
+            <div className="md:hidden">
               <div className="text-base font-bold truncate">
-                {roomTypeName || "Room Booking"} Rooms
+                {(roomTypeName || "Room Booking") + " Rooms"}
               </div>
-              <div className="text-xl font-extrabold text-emerald-400">
-                ₦{Number(pricePerNight || 0).toLocaleString("en-NG")}
+              <div className="mt-1 text-lg font-extrabold">
+                <span className="text-emerald-400">
+                  ₦{Number(pricePerNight || 0).toLocaleString("en-NG")}
+                </span>
+                <span className="ml-2 text-xs font-medium opacity-75 align-middle">
+                  Per night
+                </span>
               </div>
             </div>
-            {/* MOBILE hint */}
-            <div className="md:hidden text-[11px] opacity-70 mb-2">Per night</div>
 
-            {/* DESKTOP: stacked */}
+            {/* DESKTOP: stacked + show meta */}
             <div className="hidden md:block">
               <div className="text-sm opacity-80">Per night</div>
               <div className="text-2xl font-extrabold text-emerald-400">
                 ₦{Number(pricePerNight || 0).toLocaleString("en-NG")}
               </div>
-            </div>
-
-            {/* Meta (both) */}
-            <div className="text-xs opacity-70">
-              {nights} night(s) • {selectedIds.length} room(s)
+              <div className="text-xs opacity-70 mt-1">
+                {nights} night(s) • {selectedIds.length} room(s)
+              </div>
             </div>
           </div>
         </div>
@@ -498,7 +497,6 @@ export default function BookByTypePage() {
                 <span className="text-xs opacity-70">checking availability…</span>
               )}
             </div>
-            {/* Helper text removed */}
           </div>
 
           {rooms.length === 0 ? (
@@ -603,20 +601,6 @@ export default function BookByTypePage() {
         departureDate={departure ? dayjs(departure).format("YYYY-MM-DD") : ""}
         onConfirm={confirmGuestAndPay}
       />
-
-      {/* Global tweak for datepicker overlay */}
-      <style jsx global>{`
-        .react-datepicker-popper { z-index: 50; }
-        .react-datepicker__portal { z-index: 60; background: rgba(2, 6, 23, 0.55); }
-        @media (max-width: 767px) {
-          .react-datepicker__portal .react-datepicker {
-            width: 100vw;
-            max-width: 100vw;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-          }
-        }
-      `}</style>
     </main>
   );
 }
