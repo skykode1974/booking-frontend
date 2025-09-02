@@ -1,25 +1,53 @@
+// pages/api/booking-by-ref.js
 export default async function handler(req, res) {
-  const payment_ref = req.query.payment_ref || req.query.ref;
-  if (!payment_ref) return res.status(400).json({ booking: null, error: "missing ref" });
+  // prevent CDN / browser caching
+  res.setHeader("Cache-Control", "no-store");
 
-  // Prefer the public admin base; fall back to BACKEND_BASE_URL
-  const raw = process.env.NEXT_PUBLIC_ADMIN_API_BASE || process.env.BACKEND_BASE_URL || "";
-  let base = raw.replace(/\/$/, "");      // trim trailing slash
+  const ref = req.query.payment_ref || req.query.ref;
+  if (!ref) return res.status(200).json({ booking: null });
 
-  // If someone set base to ".../public", ensure it becomes ".../public/api"
-  if (!/\/api$/i.test(base)) base += "/api";
+  // Build base like ".../public/api"
+  const raw =
+    process.env.NEXT_PUBLIC_ADMIN_API_BASE ||
+    process.env.BACKEND_BASE_URL ||
+    "https://admin.awrabsuiteshotel.com.ng/public";
+  const base = /\/api$/i.test(raw) ? raw.replace(/\/$/, "") : raw.replace(/\/$/, "") + "/api";
 
-  const url = `${base}/hms/booking/by-ref?payment_ref=${encodeURIComponent(payment_ref)}`;
+  const byRefURL = `${base}/hms/booking/by-ref?payment_ref=${encodeURIComponent(ref)}`;
+  const statusURL = `${base}/hms/booking/status?payment_ref=${encodeURIComponent(ref)}`;
 
   try {
-    const r = await fetch(url, { headers: { Accept: "application/json" } });
-    const data = await r.json();
+    // get both in parallel
+    const [refResp, statResp] = await Promise.all([
+      fetch(byRefURL, { headers: { Accept: "application/json" } }),
+      fetch(statusURL, { headers: { Accept: "application/json" } }),
+    ]);
 
-    // Optional debug: /api/booking-by-ref?payment_ref=REF&debug=1
-    if (req.query.debug) return res.status(200).json({ used: url, data });
+    const refJson = await refResp.json().catch(() => ({}));
+    const statJson = await statResp.json().catch(() => ({}));
 
-    return res.status(200).json(data);
+    const booking = refJson?.booking ?? null;
+    const live_status = String(statJson?.status || "").toLowerCase();
+
+    // Convenience boolean for the UI
+    const hmsStatus = String(booking?.status || "").toLowerCase();
+    const is_confirmed =
+      ["consumed", "confirmed", "approved"].includes(live_status) ||
+      ["confirmed", "approved"].includes(hmsStatus);
+
+    if (req.query.debug) {
+      return res.status(200).json({
+        used: { byRefURL, statusURL },
+        booking,
+        live_status,
+        is_confirmed,
+      });
+    }
+
+    return res.status(200).json({ booking, live_status, is_confirmed });
   } catch (e) {
-    return res.status(500).json({ booking: null, used: url, error: String(e?.message || e) });
+    return res
+      .status(500)
+      .json({ booking: null, error: String(e?.message || e) });
   }
 }
