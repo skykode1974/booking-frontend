@@ -17,6 +17,8 @@ import RoomCard from "../../components/book/RoomCard";
 import GuestDetailsModal from "../../components/book/GuestDetailsModal";
 import MobileTrayDrawer from "../../components/book/MobileTrayDrawer";
 
+import FloatingReceiptButton from "../../components/FloatingReceiptButton"; 
+ 
 import { STATUS } from "../../utils/status";
 import { computeRooms } from "../../utils/availability";
 import {
@@ -255,6 +257,7 @@ export default function BookByTypePage() {
       try {
         const byId = await fetchOccupancyByRoom();
         setOccMap(byId);
+
         setRooms((prev) =>
           prev.map((r) => {
             const live = byId.get(String(r.id)) ?? byId.get(Number(r.id)) ?? null;
@@ -273,8 +276,7 @@ export default function BookByTypePage() {
               ...r,
               departure_at_raw: live.dep_iso || r.departure_at_raw,
               _live_departure_ms: liveDepMs,
-              _live_secs_left:
-                typeof live.sec_left === "number" ? live.sec_left : null,
+              _live_secs_left: typeof live.sec_left === "number" ? live.sec_left : null,
 
               admin_status,
               payment_status: livePayment ?? r.payment_status ?? null,
@@ -282,30 +284,104 @@ export default function BookByTypePage() {
             };
           })
         );
+
+        // 🔄 ALSO: if we still have any online holds, refresh them quickly
+        try {
+          if (hasDates && onlineHoldSet.size > 0 && roomTypeId) {
+            const from = dayjs(arrival).format("YYYY-MM-DD");
+            const to = dayjs(departure).format("YYYY-MM-DD");
+            const holds = await fetchOnlineHoldsByRoom({ roomTypeId, from, to });
+            setOnlineHoldSet(holds);
+          }
+        } catch {}
       } catch (e) {
         console.warn("occupancy poll failed", e?.message || e);
       }
     };
+
     run();
     timer = setInterval(run, 30_000);
     return () => clearInterval(timer);
-  }, []);
+    // 👇 add these deps so the inner refresh uses the latest dates/type
+  }, [hasDates, arrival, departure, roomTypeId, onlineHoldSet.size]);
 
-  // compute statuses (honors maintenance + online holds)
-  const computedRooms = useMemo(
-    () =>
-      computeRooms({
-        rooms,
-        hasDates,
-        availableIds,
-        now,
-        arrival,
-        departure,
-        unavailableMap: unavailMap,
-        onlineHoldSet,
-      }),
-    [rooms, hasDates, availableIds, now, arrival, departure, unavailMap, onlineHoldSet]
-  );
+  // If a room becomes occupied/confirmed/cleaning in live data, drop its hold immediately
+  useEffect(() => {
+    if (!hasDates || onlineHoldSet.size === 0) return;
+
+    setOnlineHoldSet((prev) => {
+      if (prev.size === 0) return prev;
+
+      const next = new Set(prev);
+      rooms.forEach((r) => {
+        const live = occMap.get(String(r.id)) ?? occMap.get(Number(r.id)) ?? null;
+        if (!live) return;
+
+        const s = String(
+          live.status ??
+            live.transaction_status ??
+            live.booking_status ??
+            live.state ??
+            live.status_name ??
+            live.statusName ??
+            live.bookingStatus ??
+            ""
+        ).toLowerCase();
+
+        // once any live "occupied/confirmed/checked-in/cleaning" shows up, remove the blue overlay
+        if (s.includes("occup") || s.includes("confirm") || s.includes("check_in") || s.includes("clean")) {
+          next.delete(r.id);
+        }
+      });
+
+      return next.size === prev.size ? prev : next;
+    });
+  }, [hasDates, occMap, rooms, onlineHoldSet.size]);
+
+  // ======== computedRooms with ONLINE HOLD overlay (⬇️ NEW) ========
+  const computedRooms = useMemo(() => {
+    // Step 1: base result (keeps maintenance, availability, etc.)
+    const base = typeof computeRooms === "function"
+      ? computeRooms({
+          rooms,
+          hasDates,
+          availableIds,
+          now,
+          arrival,
+          departure,
+          unavailableMap: unavailMap,
+          onlineHoldSet, // if your computeRooms already uses it, fine; we'll still overlay after
+        })
+      : (Array.isArray(rooms) ? rooms : []);
+
+    // Step 2: overlay "awaiting confirmation" for rooms that are held online
+    return (Array.isArray(base) ? base : []).map((r) => {
+      const idStr = String(r.id);
+      const idNum = Number(r.id);
+      const isHeld = onlineHoldSet?.has?.(idStr) || onlineHoldSet?.has?.(idNum);
+
+      if (!isHeld) return r;
+
+      // Use your existing constant if available; otherwise a text fallback
+      const overlayStatus = STATUS?.ONLINE_HOLD ?? "awaiting_confirmation";
+
+      return {
+        ...r,
+        status: overlayStatus,   // what RoomCard typically reads
+        uiStatus: overlayStatus, // optional extra field if needed elsewhere
+      };
+    });
+  }, [
+    rooms,
+    hasDates,
+    availableIds,
+    now,
+    arrival,
+    departure,
+    unavailMap,
+    onlineHoldSet,
+  ]);
+  // ================================================================
 
   // totals
   const nights = useMemo(
@@ -489,10 +565,7 @@ export default function BookByTypePage() {
         <section className="mb-8">
           <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
             <div className="flex items-center gap-2">
-              
-              {loadingRooms && (
-                <span className="text-xs opacity-70">loading…</span>
-              )}
+              {loadingRooms && <span className="text-xs opacity-70">loading…</span>}
               {fetchingAvail && hasDates && (
                 <span className="text-xs opacity-70">checking availability…</span>
               )}
@@ -601,6 +674,8 @@ export default function BookByTypePage() {
         departureDate={departure ? dayjs(departure).format("YYYY-MM-DD") : ""}
         onConfirm={confirmGuestAndPay}
       />
+
+  <FloatingReceiptButton />
     </main>
   );
 }

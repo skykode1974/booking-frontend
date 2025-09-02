@@ -19,7 +19,7 @@ import ScrollProgressBar from "@/components/ScrollProgressBar";
 {/* at the very top of your page JSX */}
 import WaveDivider from "@/components/WaveDivider";
 import ActivityWave from "@/components/ActivityWave";
-
+ import FloatingReceiptButton from "../components/FloatingReceiptButton";
 
 export default function Home() {
   useEffect(() => {
@@ -95,6 +95,18 @@ export default function Home() {
 <div className="bg-[#0a1524] text-center text-xs text-gray-500 py-3 border-t border-gray-700">
   Designed by <span className="text-blue-400 font-medium">Skykode</span>
 </div>
+
+     <BottomWave />
+      <ToastContainer position="top-right" theme="dark" autoClose={3000} />
+      <Footer />
+
+      {/* Skykode Credit */}
+      <div className="bg-[#0a1524] text-center text-xs text-gray-500 py-3 border-t border-gray-700">
+        Designed by <span className="text-blue-400 font-medium">Skykode</span>
+      </div>
+
+      {/* 👇 Floating “Check Receipt” button (bottom-left) */}
+      <FloatingReceiptButton />
 
       <a
         href="https://wa.me/2349161693006"

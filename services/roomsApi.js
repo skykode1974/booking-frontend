@@ -3,26 +3,39 @@ import axios from "axios";
 import dayjs from "dayjs";
 import { normalizeRoom } from "../utils/normalize";
 
+// ✅ Create a local axios instance that ALWAYS hits the same-origin Next API routes.
+// This ignores any global axios.defaults.baseURL you might have set elsewhere.
+const api = axios.create({ baseURL: "" });
+
 export async function fetchRoomsByType(roomTypeId, { signal } = {}) {
   let list = [];
   try {
-    const a = await axios.get("/api/rooms-by-type", {
+    const a = await api.get("/api/rooms-by-type", {
       params: { room_type_id: roomTypeId },
       signal,
     });
-    list = Array.isArray(a.data?.data) ? a.data.data : Array.isArray(a.data) ? a.data : [];
+    list = Array.isArray(a.data?.data)
+      ? a.data.data
+      : Array.isArray(a.data)
+      ? a.data
+      : [];
   } catch {
-    const b = await axios.get("/api/rooms", {
+    // fallback to generic rooms list
+    const b = await api.get("/api/rooms", {
       params: { room_type_id: roomTypeId, all: 1 },
       signal,
     });
-    list = Array.isArray(b.data?.data) ? b.data.data : Array.isArray(b.data) ? b.data : [];
+    list = Array.isArray(b.data?.data)
+      ? b.data.data
+      : Array.isArray(b.data)
+      ? b.data
+      : [];
   }
   return list.map(normalizeRoom);
 }
 
 export async function fetchAvailableRooms({ arrival, departure, roomTypeId, signal } = {}) {
-  const res = await axios.get("/api/available-rooms", {
+  const res = await api.get("/api/available-rooms", {
     params: {
       arrival: dayjs(arrival).format("YYYY-MM-DD"),
       departure: dayjs(departure).format("YYYY-MM-DD"),
@@ -30,13 +43,17 @@ export async function fetchAvailableRooms({ arrival, departure, roomTypeId, sign
     },
     signal,
   });
-  const arr = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data) ? res.data : [];
+  const arr = Array.isArray(res.data?.data)
+    ? res.data.data
+    : Array.isArray(res.data)
+    ? res.data
+    : [];
   return new Set(arr.map((r) => String(r.id ?? r.room_id ?? r.ID)));
 }
 
 export async function fetchOccupancyByRoom({ signal } = {}) {
   try {
-    const res = await axios.get("/api/rooms-live-overview", { signal });
+    const res = await api.get("/api/rooms-live-overview", { signal });
     const groups = res.data?.data || [];
     const byId = new Map();
     for (const g of groups) {
@@ -51,7 +68,9 @@ export async function fetchOccupancyByRoom({ signal } = {}) {
     }
     return byId;
   } catch (e) {
-    if (e?.name !== "CanceledError") console.warn("fetchOccupancyByRoom failed:", e?.message || e);
+    if (e?.name !== "CanceledError") {
+      console.warn("fetchOccupancyByRoom failed:", e?.message || e);
+    }
     return new Map();
   }
 }
@@ -76,7 +95,11 @@ export async function fetchUnavailableByRoom({ roomTypeId, from, to, businessId,
     rows.forEach((row) => {
       const id = String(row.room_id ?? row.hms_rooms_id ?? "").trim();
       if (!id) return;
-      const item = { from: row.date_from ?? null, to: row.date_to ?? null, type: row.unavailable_type ?? "unavailable" };
+      const item = {
+        from: row.date_from ?? null,
+        to: row.date_to ?? null,
+        type: row.unavailable_type ?? "unavailable",
+      };
       if (!map.has(id)) map.set(id, []);
       map.get(id).push(item);
     });
