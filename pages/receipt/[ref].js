@@ -3,11 +3,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 
-// --- helpers ---------------------------------------------------
-const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, "_");
-
-// only flip UI when these appear
-const statusIsConfirmed = (s) => ["consumed", "confirmed"].includes(norm(s));
+// ---------------- helpers ----------------
+const normalize = (s) => String(s || "").toLowerCase().replace(/\s+/g, "_");
+// Only treat CONSUMED as confirmed in the UI
+const statusIsConfirmed = (s) => normalize(s) === "consumed";
 
 function parseRoomType(val) {
   if (!val) return "";
@@ -22,7 +21,7 @@ function parseRoomType(val) {
   return String(val);
 }
 
-// handles "\"[\\\"201\\\"]\"" → 201
+// handles "\"[\\\"201\\\"]\"" → "201" (and arrays → "201, 202")
 function cleanRoomNo(val) {
   if (val == null) return "-";
   let s = String(val);
@@ -30,9 +29,9 @@ function cleanRoomNo(val) {
     const j = JSON.parse(s);
     if (Array.isArray(j) && j.length) return j.join(", ");
   } catch {}
-  s = s.replace(/^"+|"+$/g, "");         // trim wrapping quotes
-  s = s.replace(/\\+"/g, '"');          // unescape quotes
-  s = s.replace(/^\[|\]$/g, "");        // strip [] if present
+  s = s.replace(/^"+|"+$/g, ""); // trim wrapping quotes
+  s = s.replace(/\\"/g, '"');    // unescape quotes
+  s = s.replace(/^\[|\]$/g, ""); // strip [] if present
   return s || "-";
 }
 
@@ -47,7 +46,7 @@ function Badge({ ok }) {
     </span>
   );
 }
-// ---------------------------------------------------------------
+// ------------------------------------------
 
 export default function ReceiptByRef() {
   const router = useRouter();
@@ -59,7 +58,7 @@ export default function ReceiptByRef() {
 
   const isConfirmed = useMemo(() => statusIsConfirmed(status), [status]);
 
-  // 1) Load booking by ref
+  // 1) Load booking by ref, and coerce temp/confirmed -> awaiting_confirmation
   useEffect(() => {
     if (!ref) return;
     (async () => {
@@ -69,17 +68,24 @@ export default function ReceiptByRef() {
           const d = await r.json();
           if (d?.booking) {
             setBooking(d.booking);
-            setStatus(norm(d.booking.status || "awaiting_confirmation"));
+            const raw = normalize(d.booking.status || "awaiting_confirmation");
+            // If the backend says source=temp and status=confirmed, still "awaiting confirmation" in UI
+            const effective =
+              (d.booking.source === "temp" && raw === "confirmed")
+                ? "awaiting_confirmation"
+                : raw;
+            setStatus(effective);
             return;
           }
         }
-        // fallback: query plain status so the user isn't stuck
+        // Fallback: even if we didn't get the full booking, at least check the raw status
         const s = await fetch(`/api/booking-status?payment_ref=${encodeURIComponent(ref)}`);
         if (s.ok) {
           const json = await s.json();
           if (json?.status) {
-            const next = norm(json.status);
+            const next = normalize(json.status);
             setStatus(next);
+            // If it is already confirmed (i.e., consumed), build a minimal receipt so the user sees success
             if (statusIsConfirmed(next) && !booking) {
               setBooking({
                 payment_ref: ref,
@@ -91,9 +97,9 @@ export default function ReceiptByRef() {
         }
       } catch {}
     })();
-  }, [ref]);
+  }, [ref]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 2) Poll status until consumed|confirmed
+  // 2) Poll status until it becomes CONSUMED
   useEffect(() => {
     if (!ref || isConfirmed) return;
     let t;
@@ -104,7 +110,7 @@ export default function ReceiptByRef() {
         if (r.ok) {
           const d = await r.json();
           if (d?.status) {
-            const next = norm(d.status);
+            const next = normalize(d.status);
             setStatus(next);
             if (statusIsConfirmed(next) && !booking) {
               setBooking({ payment_ref: ref, bookings: [], status: next });
@@ -127,7 +133,7 @@ export default function ReceiptByRef() {
       const r = await fetch(`/api/booking-status?payment_ref=${encodeURIComponent(ref)}`);
       if (r.ok) {
         const d = await r.json();
-        if (d?.status) setStatus(norm(d.status));
+        if (d?.status) setStatus(normalize(d.status));
       }
     } catch {} finally {
       setChecking(false);
@@ -150,7 +156,10 @@ export default function ReceiptByRef() {
           <p className="text-sm text-gray-600">
             We couldn’t find a booking with reference <strong>{ref}</strong>.
           </p>
-          <Link href="/receipt" className="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2">
+          <Link
+            href="/receipt"
+            className="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2"
+          >
             Try another reference
           </Link>
         </div>
@@ -204,7 +213,11 @@ export default function ReceiptByRef() {
                       <td className="border border-blue-200 px-3 py-2">{booking.arrival_date}</td>
                       <td className="border border-blue-200 px-3 py-2">{booking.departure_date}</td>
                       <td className="border border-blue-200 px-3 py-2 capitalize">
-                        {it.status ? it.status : isConfirmed ? "Confirmed" : "Awaiting confirmation"}
+                        {it.status
+                          ? it.status
+                          : isConfirmed
+                          ? "Confirmed"
+                          : "Awaiting confirmation"}
                       </td>
                     </tr>
                   );

@@ -5,8 +5,10 @@ import Script from "next/script";
 import { useRouter } from "next/router";
 
 // ---------- helpers ----------
-const normalize = (s) => String(s || "").toLowerCase().replace(/\s+/g, "_");
-const statusIsConfirmed = (s) => ["consumed", "confirmed"].includes(normalize(s));
+
+ const normalize = (s) => String(s || "").toLowerCase().replace(/\s+/g, "_");
+ const statusIsConfirmed = (s) => normalize(s) === "consumed";
+
 // -----------------------------
 
 function FullScreenLoader({ message = "Please wait..." }) {
