@@ -40,9 +40,9 @@ export default function ThankYouPage() {
       if (stored) {
         const b = JSON.parse(stored);
         setBooking(b);
-        const initial = String(
-          b.status || b.overall_status || b.payment_status || "awaiting_confirmation"
-        ).toLowerCase().replace(/\s+/g, "_");
+        const initial = String(b.status || "awaiting_confirmation")
+   .toLowerCase()
+   .replace(/\s+/g, "_");
         setStatus(initial);
       }
     } finally {
@@ -93,10 +93,10 @@ export default function ThankYouPage() {
       }
     };
 
-    if (status !== "confirmed") {
-      check();
-      timer = setInterval(check, 10_000);
-    }
+   + if (!statusIsConfirmed(status)) {
+    check();
+    timer = setInterval(check, 10_000);
+  }
     return () => timer && clearInterval(timer);
   }, [booking?.payment_ref, status]);
 
@@ -236,10 +236,9 @@ export default function ThankYouPage() {
     }
   };
 
-   const statusIsConfirmed = (s) =>
-    ["confirmed", "success", "paid_confirmed", "consumed", "paid"].includes(
-      String(s || "").toLowerCase().replace(/\s+/g, "_")
-    );
+  +const normalize = (s) => String(s || "").toLowerCase().replace(/\s+/g, "_");
++const statusIsConfirmed = (s) => ["consumed", "confirmed"].includes(normalize(s));
+
   const isConfirmed = statusIsConfirmed(status);
 
   // If we already have a token saved, reflect button state
