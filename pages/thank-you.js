@@ -4,6 +4,11 @@ import Link from "next/link";
 import Script from "next/script";
 import { useRouter } from "next/router";
 
+// ---------- helpers ----------
+const normalize = (s) => String(s || "").toLowerCase().replace(/\s+/g, "_");
+const statusIsConfirmed = (s) => ["consumed", "confirmed"].includes(normalize(s));
+// -----------------------------
+
 function FullScreenLoader({ message = "Please wait..." }) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-blue-950 via-slate-900 to-slate-800 text-white">
@@ -40,9 +45,7 @@ export default function ThankYouPage() {
       if (stored) {
         const b = JSON.parse(stored);
         setBooking(b);
-        const initial = String(b.status || "awaiting_confirmation")
-   .toLowerCase()
-   .replace(/\s+/g, "_");
+        const initial = normalize(b.status || b.overall_status || b.payment_status || "awaiting_confirmation");
         setStatus(initial);
       }
     } finally {
@@ -62,10 +65,7 @@ export default function ThankYouPage() {
           const d = await r.json();
           if (d?.booking) {
             setBooking(d.booking);
-            setStatus(
-              String(d.booking.status || "awaiting_confirmation")
-                .toLowerCase().replace(/\s+/g, "_")
-            );
+            setStatus(normalize(d.booking.status || "awaiting_confirmation"));
           }
         }
       } catch {}
@@ -77,6 +77,17 @@ export default function ThankYouPage() {
     if (!booking?.payment_ref) return;
     let timer = null;
 
+    const refreshDetailsIfConfirmed = async () => {
+      if (!booking?.payment_ref) return;
+      try {
+        const r = await fetch(`/api/booking-by-ref?payment_ref=${encodeURIComponent(booking.payment_ref)}`);
+        if (r.ok) {
+          const d = await r.json();
+          if (d?.booking) setBooking(d.booking);
+        }
+      } catch {}
+    };
+
     const check = async () => {
       try {
         setChecking(true);
@@ -84,8 +95,12 @@ export default function ThankYouPage() {
         if (res.ok) {
           const data = await res.json();
           if (data?.status) {
-            const next = String(data.status).toLowerCase().replace(/\s+/g, "_");
+            const next = normalize(data.status);
             setStatus(next);
+            if (statusIsConfirmed(next)) {
+              // once it flips, fetch full details so the receipt text is perfect
+              await refreshDetailsIfConfirmed();
+            }
           }
         }
       } catch {} finally {
@@ -93,22 +108,22 @@ export default function ThankYouPage() {
       }
     };
 
-   + if (!statusIsConfirmed(status)) {
-    check();
-    timer = setInterval(check, 10_000);
-  }
+    if (!statusIsConfirmed(status)) {
+      check();
+      timer = setInterval(check, 10_000);
+    }
     return () => timer && clearInterval(timer);
   }, [booking?.payment_ref, status]);
 
-  /** ---------- 4) Local popup (Notification API) when status becomes confirmed ---------- */
+  /** ---------- 4) Local popup (Notification API) when confirmed ---------- */
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
-   if (!statusIsConfirmed(status)) return;
+    if (!statusIsConfirmed(status)) return;
     if (notifiedRef.current) return; // already shown
 
     const title = "✅ Booking Confirmed";
     const body  = `Reference ${booking?.payment_ref || ""} has been confirmed.`;
-    const icon  = "/icons/icon-192.png"; // optional if you have one
+    const icon  = "/icons/icon-192.png";
 
     const show = () => {
       try {
@@ -146,13 +161,23 @@ export default function ThankYouPage() {
       return;
     }
 
+    // Guard: basic env presence
+    const hasEnv =
+      process.env.NEXT_PUBLIC_FB_API_KEY &&
+      process.env.NEXT_PUBLIC_FB_MESSAGING_SENDER_ID &&
+      process.env.NEXT_PUBLIC_FB_APP_ID &&
+      process.env.NEXT_PUBLIC_FB_VAPID_KEY;
+    if (!hasEnv) {
+      alert("Push is not configured on this site.");
+      return;
+    }
+
     try {
       // 1) Register our SW (idempotent)
       const reg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
 
       // 2) Wait until Firebase compat scripts finished loading
       if (!firebaseReady || !window.firebase) {
-        // small wait loop
         await new Promise((res) => setTimeout(res, 300));
       }
       if (!window.firebase) {
@@ -171,7 +196,7 @@ export default function ThankYouPage() {
       };
       if (!window.firebase.apps?.length) window.firebase.initializeApp(fbConfig);
 
-      // 4) Make sure the SW also knows config (if you implemented a message handler there)
+      // 4) Let SW know too (optional)
       if (reg.active) {
         try { reg.active.postMessage({ type: "INIT_FB", config: fbConfig }); } catch {}
       }
@@ -206,7 +231,7 @@ export default function ThankYouPage() {
       localStorage.setItem("fcm_token", token);
       setPushEnabled(true);
 
-      // 9) Foreground listener (optional dev feedback)
+      // 9) Foreground listener (optional)
       messaging.onMessage((payload) => {
         const title = payload?.notification?.title || "Booking update";
         const body  = payload?.notification?.body  || "";
@@ -227,17 +252,23 @@ export default function ThankYouPage() {
       if (res.ok) {
         const data = await res.json();
         if (data?.status) {
-          const next = String(data.status).toLowerCase().replace(/\s+/g, "_");
+          const next = normalize(data.status);
           setStatus(next);
+          if (statusIsConfirmed(next)) {
+            try {
+              const r = await fetch(`/api/booking-by-ref?payment_ref=${encodeURIComponent(booking.payment_ref)}`);
+              if (r.ok) {
+                const d = await r.json();
+                if (d?.booking) setBooking(d.booking);
+              }
+            } catch {}
+          }
         }
       }
     } catch {} finally {
       setChecking(false);
     }
   };
-
-  +const normalize = (s) => String(s || "").toLowerCase().replace(/\s+/g, "_");
-+const statusIsConfirmed = (s) => ["consumed", "confirmed"].includes(normalize(s));
 
   const isConfirmed = statusIsConfirmed(status);
 
@@ -401,50 +432,43 @@ export default function ThankYouPage() {
             <p><strong>📞 Phone:</strong> {booking.phone}</p>
           </div>
 
-         
-{/* Actions */}
-<div className="mt-8 flex gap-4 justify-center print:hidden">
-  {/* Open the shareable receipt URL */}
-  <Link
-    href={`/receipt/${encodeURIComponent(booking.payment_ref || "")}`}
-    className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded transition"
-  >
-    Open receipt link
-  </Link>
+          {/* Actions */}
+          <div className="mt-8 flex gap-4 justify-center print:hidden">
+            <Link
+              href={`/receipt/${encodeURIComponent(booking.payment_ref || "")}`}
+              className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded transition"
+            >
+              Open receipt link
+            </Link>
 
-  {/* Copy link to clipboard */}
-  <button
-    onClick={() => {
-      try {
-        const href = `${window.location.origin}/receipt/${encodeURIComponent(booking.payment_ref || "")}`;
-        navigator.clipboard.writeText(href);
-        alert("Receipt link copied");
-      } catch {
-        alert("Could not copy link");
-      }
-    }}
-    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition"
-  >
-    Copy link
-  </button>
+            <button
+              onClick={() => {
+                try {
+                  const href = `${window.location.origin}/receipt/${encodeURIComponent(booking.payment_ref || "")}`;
+                  navigator.clipboard.writeText(href);
+                  alert("Receipt link copied");
+                } catch {
+                  alert("Could not copy link");
+                }
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition"
+            >
+              Copy link
+            </button>
 
-  {/* Existing buttons */}
-  <Link
-    href="/"
-    className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition"
-  >
-    ← Go to Home
-  </Link>
-  <button
-    onClick={() => window.print()}
-    className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition"
-  >
-    🖨️ Print Receipt
-  </button>
-</div>
-
-
-
+            <Link
+              href="/"
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition"
+            >
+              ← Go to Home
+            </Link>
+            <button
+              onClick={() => window.print()}
+              className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition"
+            >
+              🖨️ Print Receipt
+            </button>
+          </div>
         </div>
 
         <style jsx>{`

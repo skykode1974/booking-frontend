@@ -3,6 +3,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 
+const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, "_");
+const statusIsConfirmed = (s) => ["consumed", "confirmed"].includes(norm(s));
+
 function Badge({ ok }) {
   return (
     <span
@@ -18,20 +21,14 @@ function Badge({ ok }) {
 export default function ReceiptByRef() {
   const router = useRouter();
 
-  // IMPORTANT: start with a stable value on the server (empty string),
-  // then fill it on the client to avoid hydration mismatch.
   const [ref, setRef] = useState("");
-
   const [booking, setBooking] = useState(null);
   const [status, setStatus] = useState("awaiting_confirmation");
   const [checking, setChecking] = useState(false);
 
-  const isConfirmed = useMemo(() => {
-    const s = String(status || "").toLowerCase().replace(/\s+/g, "_");
-    return s === "confirmed" || s === "success" || s === "paid_confirmed";
-  }, [status]);
+  const isConfirmed = useMemo(() => statusIsConfirmed(status), [status]);
 
-  // After mount, derive `ref` from the router / URL.
+  // derive ref from URL after mount
   useEffect(() => {
     const qRef =
       (router.query?.ref && String(router.query.ref)) ||
@@ -42,48 +39,36 @@ export default function ReceiptByRef() {
     setRef(qRef);
   }, [router.query?.ref]);
 
-  // Fetch booking details once we have a ref
+  // load booking
   useEffect(() => {
     if (!ref) return;
     (async () => {
       try {
-        const r = await fetch(
-          `/api/booking-by-ref?payment_ref=${encodeURIComponent(ref)}`
-        );
+        const r = await fetch(`/api/booking-by-ref?payment_ref=${encodeURIComponent(ref)}`);
         if (r.ok) {
           const d = await r.json();
           if (d?.booking) {
             setBooking(d.booking);
-            setStatus(
-              String(d.booking.status || "awaiting_confirmation")
-                .toLowerCase()
-                .replace(/\s+/g, "_")
-            );
+            setStatus(norm(d.booking.status || "awaiting_confirmation"));
           }
         }
       } catch {}
     })();
   }, [ref]);
 
-  // Poll status until confirmed
+  // poll until consumed|confirmed
   useEffect(() => {
     if (!ref || isConfirmed) return;
     let t;
     const run = async () => {
       try {
         setChecking(true);
-        const r = await fetch(
-          `/api/booking-status?payment_ref=${encodeURIComponent(ref)}`
-        );
+        const r = await fetch(`/api/booking-status?payment_ref=${encodeURIComponent(ref)}`);
         if (r.ok) {
           const d = await r.json();
-          if (d?.status)
-            setStatus(
-              String(d.status).toLowerCase().replace(/\s+/g, "_")
-            );
+          if (d?.status) setStatus(norm(d.status));
         }
-      } catch {}
-      finally {
+      } catch {} finally {
         setChecking(false);
       }
     };
@@ -92,7 +77,7 @@ export default function ReceiptByRef() {
     return () => clearInterval(t);
   }, [ref, isConfirmed]);
 
-  // Local browser popup on confirmation (no FCM needed)
+  // simple local notification when confirmed
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
     if (!isConfirmed || !ref) return;
@@ -111,16 +96,12 @@ export default function ReceiptByRef() {
     if (!ref) return;
     try {
       setChecking(true);
-      const r = await fetch(
-        `/api/booking-status?payment_ref=${encodeURIComponent(ref)}`
-      );
+      const r = await fetch(`/api/booking-status?payment_ref=${encodeURIComponent(ref)}`);
       if (r.ok) {
         const d = await r.json();
-        if (d?.status)
-          setStatus(String(d.status).toLowerCase().replace(/\s+/g, "_"));
+        if (d?.status) setStatus(norm(d.status));
       }
-    } catch {}
-    finally {
+    } catch {} finally {
       setChecking(false);
     }
   };
@@ -140,16 +121,12 @@ export default function ReceiptByRef() {
         <div className="text-center mb-6">
           <div
             className={`w-16 h-16 mx-auto mb-2 rounded-full ${
-              isConfirmed
-                ? "bg-green-100 text-green-600"
-                : "bg-blue-100 text-blue-600"
+              isConfirmed ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600"
             } flex items-center justify-center text-3xl`}
           >
             {isConfirmed ? "✔" : "ℹ"}
           </div>
-          <h2 className="text-3xl font-extrabold text-blue-800">
-            Awrab Suites Hotels
-          </h2>
+          <h2 className="text-3xl font-extrabold text-blue-800">Awrab Suites Hotels</h2>
           <hr className="mt-2 border-blue-200" />
         </div>
 
@@ -158,25 +135,9 @@ export default function ReceiptByRef() {
         </div>
 
         <h1 className="text-2xl font-bold mb-4 text-blue-700 text-center">
-          {isConfirmed
-            ? "🎉 Booking Confirmed"
-            : "✅ Payment Received — Awaiting Confirmation"}
+          {isConfirmed ? "🎉 Booking Confirmed" : "✅ Payment Received — Awaiting Confirmation"}
         </h1>
 
-        <p className="mb-3 text-gray-700 text-center">
-          {booking?.full_name ? (
-            <>
-              Dear <strong>{booking.full_name}</strong>,{" "}
-            </>
-          ) : null}
-          {isConfirmed ? (
-            <>your booking is now <strong>confirmed</strong>.</>
-          ) : (
-            <>your booking is <strong>awaiting confirmation</strong>.</>
-          )}
-        </p>
-
-        {/* Details */}
         {booking?.bookings ? (
           <div className="overflow-x-auto mb-6">
             <table className="w-full border border-blue-200 text-sm rounded overflow-hidden">
@@ -192,77 +153,37 @@ export default function ReceiptByRef() {
               <tbody>
                 {booking.bookings.map((it, i) => (
                   <tr key={i} className="bg-white hover:bg-blue-50">
-                    <td className="border border-blue-200 px-3 py-2">
-                      {it.room_number}
-                    </td>
-                    <td className="border border-blue-200 px-3 py-2">
-                      {it.room_type}
-                    </td>
-                    <td className="border border-blue-200 px-3 py-2">
-                      {booking.arrival_date}
-                    </td>
-                    <td className="border border-blue-200 px-3 py-2">
-                      {booking.departure_date}
-                    </td>
+                    <td className="border border-blue-200 px-3 py-2">{it.room_number}</td>
+                    <td className="border border-blue-200 px-3 py-2">{it.room_type}</td>
+                    <td className="border border-blue-200 px-3 py-2">{booking.arrival_date}</td>
+                    <td className="border border-blue-200 px-3 py-2">{booking.departure_date}</td>
                     <td className="border border-blue-200 px-3 py-2 capitalize">
-                      {it.status
-                        ? it.status
-                        : isConfirmed
-                        ? "Confirmed"
-                        : "Awaiting confirmation"}
+                      {it.status ? it.status : isConfirmed ? "Confirmed" : "Awaiting confirmation"}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        ) : booking ? (
-          <div className="text-center mt-6">
-            <p className="mb-1 text-gray-800">
-              <strong>Date:</strong> {booking.booking_date}
-            </p>
-          </div>
         ) : null}
 
         <div className="space-y-2 text-gray-800 text-center mt-4">
-          <p>
-            <strong>🔖 Booking Reference:</strong> {ref || "—"}
-          </p>
-          {booking?.phone && (
-            <p>
-              <strong>📞 Phone:</strong> {booking.phone}
-            </p>
-          )}
-          {booking?.email && (
-            <p>
-              <strong>📧 Email:</strong> {booking.email}
-            </p>
-          )}
+          <p><strong>🔖 Booking Reference:</strong> {ref || "—"}</p>
+          {booking?.phone && <p><strong>📞 Phone:</strong> {booking.phone}</p>}
+          {booking?.email && <p><strong>📧 Email:</strong> {booking.email}</p>}
         </div>
 
         <div className="mt-8 flex gap-3 justify-center">
-          <button
-            onClick={manualRefresh}
-            className="bg-slate-200 px-4 py-2 rounded hover:bg-slate-300"
-          >
+          <button onClick={manualRefresh} className="bg-slate-200 px-4 py-2 rounded hover:bg-slate-300">
             {checking ? "Checking…" : "Check status now"}
           </button>
-          <button
-            onClick={() => window.print()}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-          >
+          <button onClick={() => window.print()} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
             🖨️ Print
           </button>
-          <button
-            onClick={copyLink}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-          >
+          <button onClick={copyLink} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
             Copy link
           </button>
-          <Link
-            href="/"
-            className="bg-slate-900 hover:bg-black text-white px-4 py-2 rounded"
-          >
+          <Link href="/" className="bg-slate-900 hover:bg-black text-white px-4 py-2 rounded">
             Home
           </Link>
         </div>

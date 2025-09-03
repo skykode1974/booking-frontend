@@ -3,6 +3,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 
+// --- helpers ---------------------------------------------------
+const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, "_");
+
+// only flip UI when these appear
+const statusIsConfirmed = (s) => ["consumed", "confirmed"].includes(norm(s));
 
 function parseRoomType(val) {
   if (!val) return "";
@@ -17,13 +22,19 @@ function parseRoomType(val) {
   return String(val);
 }
 
-
-
-
-const statusIsConfirmed = (s) =>
-  ["confirmed", "success", "paid_confirmed", "consumed", "paid"].includes(
-    String(s || "").toLowerCase().replace(/\s+/g, "_")
-  );
+// handles "\"[\\\"201\\\"]\"" → 201
+function cleanRoomNo(val) {
+  if (val == null) return "-";
+  let s = String(val);
+  try {
+    const j = JSON.parse(s);
+    if (Array.isArray(j) && j.length) return j.join(", ");
+  } catch {}
+  s = s.replace(/^"+|"+$/g, "");         // trim wrapping quotes
+  s = s.replace(/\\+"/g, '"');          // unescape quotes
+  s = s.replace(/^\[|\]$/g, "");        // strip [] if present
+  return s || "-";
+}
 
 function Badge({ ok }) {
   return (
@@ -36,6 +47,7 @@ function Badge({ ok }) {
     </span>
   );
 }
+// ---------------------------------------------------------------
 
 export default function ReceiptByRef() {
   const router = useRouter();
@@ -47,46 +59,31 @@ export default function ReceiptByRef() {
 
   const isConfirmed = useMemo(() => statusIsConfirmed(status), [status]);
 
-  // Load booking details once we have the ref (primary)
+  // 1) Load booking by ref
   useEffect(() => {
     if (!ref) return;
     (async () => {
       try {
-        const r = await fetch(
-          `/api/booking-by-ref?payment_ref=${encodeURIComponent(ref)}`
-        );
+        const r = await fetch(`/api/booking-by-ref?payment_ref=${encodeURIComponent(ref)}`);
         if (r.ok) {
           const d = await r.json();
           if (d?.booking) {
             setBooking(d.booking);
-            setStatus(
-              String(d.booking.status || "awaiting_confirmation")
-                .toLowerCase()
-                .replace(/\s+/g, "_")
-            );
+            setStatus(norm(d.booking.status || "awaiting_confirmation"));
             return;
           }
         }
-        // fallback: even if booking details weren't found, check pure status
-        const s = await fetch(
-          `/api/booking-status?payment_ref=${encodeURIComponent(ref)}`
-        );
+        // fallback: query plain status so the user isn't stuck
+        const s = await fetch(`/api/booking-status?payment_ref=${encodeURIComponent(ref)}`);
         if (s.ok) {
           const json = await s.json();
           if (json?.status) {
-            const next = String(json.status).toLowerCase().replace(/\s+/g, "_");
+            const next = norm(json.status);
             setStatus(next);
-            // If confirmed (incl. consumed), show a minimal receipt so user isn't stuck
             if (statusIsConfirmed(next) && !booking) {
               setBooking({
                 payment_ref: ref,
-                full_name: null,
-                phone: null,
-                email: null,
                 bookings: [],
-                arrival_date: null,
-                departure_date: null,
-                booking_date: null,
                 status: next,
               });
             }
@@ -96,27 +93,21 @@ export default function ReceiptByRef() {
     })();
   }, [ref]);
 
-  // Poll status until confirmed (covers the edge when temp row exists)
+  // 2) Poll status until consumed|confirmed
   useEffect(() => {
     if (!ref || isConfirmed) return;
     let t;
     const run = async () => {
       try {
         setChecking(true);
-        const r = await fetch(
-          `/api/booking-status?payment_ref=${encodeURIComponent(ref)}`
-        );
+        const r = await fetch(`/api/booking-status?payment_ref=${encodeURIComponent(ref)}`);
         if (r.ok) {
           const d = await r.json();
           if (d?.status) {
-            const next = String(d.status).toLowerCase().replace(/\s+/g, "_");
+            const next = norm(d.status);
             setStatus(next);
             if (statusIsConfirmed(next) && !booking) {
-              setBooking({
-                payment_ref: ref,
-                bookings: [],
-                status: next,
-              });
+              setBooking({ payment_ref: ref, bookings: [], status: next });
             }
           }
         }
@@ -125,7 +116,7 @@ export default function ReceiptByRef() {
       }
     };
     run();
-    t = setInterval(run, 10000);
+    t = setInterval(run, 10_000);
     return () => clearInterval(t);
   }, [ref, isConfirmed, booking]);
 
@@ -133,15 +124,10 @@ export default function ReceiptByRef() {
     if (!ref) return;
     try {
       setChecking(true);
-      const r = await fetch(
-        `/api/booking-status?payment_ref=${encodeURIComponent(ref)}`
-      );
+      const r = await fetch(`/api/booking-status?payment_ref=${encodeURIComponent(ref)}`);
       if (r.ok) {
         const d = await r.json();
-        if (d?.status) {
-          const next = String(d.status).toLowerCase().replace(/\s+/g, "_");
-          setStatus(next);
-        }
+        if (d?.status) setStatus(norm(d.status));
       }
     } catch {} finally {
       setChecking(false);
@@ -156,7 +142,6 @@ export default function ReceiptByRef() {
     );
   }
 
-  // Not found AND not confirmed → show the “not found” card
   if (!booking && !isConfirmed) {
     return (
       <div className="min-h-screen grid place-items-center bg-gray-50 p-6">
@@ -165,10 +150,7 @@ export default function ReceiptByRef() {
           <p className="text-sm text-gray-600">
             We couldn’t find a booking with reference <strong>{ref}</strong>.
           </p>
-          <Link
-            href="/receipt"
-            className="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2"
-          >
+          <Link href="/receipt" className="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2">
             Try another reference
           </Link>
         </div>
@@ -187,9 +169,7 @@ export default function ReceiptByRef() {
           >
             {isConfirmed ? "✔" : "ℹ"}
           </div>
-          <h2 className="text-3xl font-extrabold text-blue-800">
-            Awrab Suites Hotels
-          </h2>
+          <h2 className="text-3xl font-extrabold text-blue-800">Awrab Suites Hotels</h2>
           <hr className="mt-2 border-blue-200" />
         </div>
 
@@ -198,9 +178,7 @@ export default function ReceiptByRef() {
         </div>
 
         <h1 className="text-2xl font-bold mb-4 text-blue-700 text-center">
-          {isConfirmed
-            ? "🎉 Booking Confirmed"
-            : "✅ Payment Received — Awaiting Confirmation"}
+          {isConfirmed ? "🎉 Booking Confirmed" : "✅ Payment Received — Awaiting Confirmation"}
         </h1>
 
         {(booking?.bookings?.length || 0) > 0 ? (
@@ -215,66 +193,41 @@ export default function ReceiptByRef() {
                   <th className="border border-blue-300 px-3 py-2">Status</th>
                 </tr>
               </thead>
-             <tbody>
-  {booking.bookings?.map((it, i) => {
-    const roomNo =
-      it.room_number ?? it.room_no ?? it.room ?? "-";
-    const roomType =
-      it.room_type ?? parseRoomType(booking.room_type) ?? "-";
-
-    return (
-      <tr key={i} className="bg-white hover:bg-blue-50">
-        <td className="border border-blue-200 px-3 py-2">{roomNo}</td>
-        <td className="border border-blue-200 px-3 py-2">{roomType}</td>
-        <td className="border border-blue-200 px-3 py-2">{booking.arrival_date}</td>
-        <td className="border border-blue-200 px-3 py-2">{booking.departure_date}</td>
-        <td className="border border-blue-200 px-3 py-2 capitalize">
-          {it.status ? it.status : (isConfirmed ? "Confirmed" : "Awaiting confirmation")}
-        </td>
-      </tr>
-    );
-  })}
-</tbody>
-
+              <tbody>
+                {booking.bookings?.map((it, i) => {
+                  const roomNo = cleanRoomNo(it.room_number ?? it.room_no ?? it.room);
+                  const roomType = it.room_type ?? parseRoomType(booking.room_type) ?? "-";
+                  return (
+                    <tr key={i} className="bg-white hover:bg-blue-50">
+                      <td className="border border-blue-200 px-3 py-2">{roomNo}</td>
+                      <td className="border border-blue-200 px-3 py-2">{roomType}</td>
+                      <td className="border border-blue-200 px-3 py-2">{booking.arrival_date}</td>
+                      <td className="border border-blue-200 px-3 py-2">{booking.departure_date}</td>
+                      <td className="border border-blue-200 px-3 py-2 capitalize">
+                        {it.status ? it.status : isConfirmed ? "Confirmed" : "Awaiting confirmation"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
           </div>
         ) : null}
 
-        {/* Minimal info if we only have the ref */}
         <div className="space-y-2 text-gray-800 text-center mt-4">
-          <p>
-            <strong>🔖 Booking Reference:</strong>{" "}
-            {booking?.payment_ref || ref}
-          </p>
-          {booking?.phone && (
-            <p>
-              <strong>📞 Phone:</strong> {booking.phone}
-            </p>
-          )}
-          {booking?.email && (
-            <p>
-              <strong>📧 Email:</strong> {booking.email}
-            </p>
-          )}
+          <p><strong>🔖 Booking Reference:</strong> {booking?.payment_ref || ref}</p>
+          {booking?.phone && <p><strong>📞 Phone:</strong> {booking.phone}</p>}
+          {booking?.email && <p><strong>📧 Email:</strong> {booking.email}</p>}
         </div>
 
         <div className="mt-8 flex gap-3 justify-center">
-          <button
-            onClick={manualRefresh}
-            className="bg-slate-200 px-4 py-2 rounded hover:bg-slate-300"
-          >
+          <button onClick={manualRefresh} className="bg-slate-200 px-4 py-2 rounded hover:bg-slate-300">
             {checking ? "Checking…" : "Check status now"}
           </button>
-          <button
-            onClick={() => window.print()}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-          >
+          <button onClick={() => window.print()} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
             🖨️ Print
           </button>
-          <Link
-            href="/"
-            className="bg-slate-900 hover:bg-black text-white px-4 py-2 rounded"
-          >
+          <Link href="/" className="bg-slate-900 hover:bg-black text-white px-4 py-2 rounded">
             Home
           </Link>
         </div>
