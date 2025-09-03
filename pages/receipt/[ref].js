@@ -3,10 +3,44 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 
-// ---------------- helpers ----------------
-const normalize = (s) => String(s || "").toLowerCase().replace(/\s+/g, "_");
-// Only treat CONSUMED as confirmed in the UI
-const statusIsConfirmed = (s) => normalize(s) === "consumed";
+/* ----------------- helpers ----------------- */
+const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, "_");
+// Only flip UI to “Booking Confirmed” when temp row is CONSUMED.
+const isConsumed = (s) => norm(s) === "consumed";
+
+// "\"[\\\"201\\\"]\"" → ["201"]
+function extractRoomTokens(maybeArrayOrJsonOrString) {
+  const out = [];
+  if (maybeArrayOrJsonOrString == null) return out;
+
+  const add = (v) => {
+    const s = String(v ?? "").trim();
+    if (!s) return;
+    const digits = s.replace(/\D+/g, "");
+    out.push(digits || s);
+  };
+
+  if (Array.isArray(maybeArrayOrJsonOrString)) {
+    maybeArrayOrJsonOrString.forEach(add);
+    return Array.from(new Set(out));
+  }
+
+  let s = String(maybeArrayOrJsonOrString);
+  try {
+    const j = JSON.parse(s);
+    if (Array.isArray(j)) {
+      j.forEach(add);
+      return Array.from(new Set(out));
+    }
+  } catch {}
+
+  s = s.replace(/^"+|"+$/g, "");   // trim wrapping quotes
+  s = s.replace(/\\+"/g, '"');     // unescape quotes
+  s = s.replace(/^\[|\]$/g, "");   // strip []
+  s.split(",").map((p) => p.trim().replace(/^"+|"+$/g, "")).forEach(add);
+
+  return Array.from(new Set(out));
+}
 
 function parseRoomType(val) {
   if (!val) return "";
@@ -21,20 +55,6 @@ function parseRoomType(val) {
   return String(val);
 }
 
-// handles "\"[\\\"201\\\"]\"" → "201" (and arrays → "201, 202")
-function cleanRoomNo(val) {
-  if (val == null) return "-";
-  let s = String(val);
-  try {
-    const j = JSON.parse(s);
-    if (Array.isArray(j) && j.length) return j.join(", ");
-  } catch {}
-  s = s.replace(/^"+|"+$/g, ""); // trim wrapping quotes
-  s = s.replace(/\\"/g, '"');    // unescape quotes
-  s = s.replace(/^\[|\]$/g, ""); // strip [] if present
-  return s || "-";
-}
-
 function Badge({ ok }) {
   return (
     <span
@@ -46,19 +66,19 @@ function Badge({ ok }) {
     </span>
   );
 }
-// ------------------------------------------
 
+/* --------------- component ----------------- */
 export default function ReceiptByRef() {
   const router = useRouter();
   const ref = (router.query.ref || "").toString();
 
-  const [booking, setBooking] = useState(null);
-  const [status, setStatus] = useState("awaiting_confirmation");
+  const [booking, setBooking] = useState(null);                 // backend payload
+  const [uiStatus, setUiStatus] = useState("awaiting_confirmation"); // what we display
   const [checking, setChecking] = useState(false);
 
-  const isConfirmed = useMemo(() => statusIsConfirmed(status), [status]);
+  const isUiConfirmed = useMemo(() => isConsumed(uiStatus), [uiStatus]);
 
-  // 1) Load booking by ref, and coerce temp/confirmed -> awaiting_confirmation
+  // 1) Load booking details; NEVER treat "confirmed" as confirmed here.
   useEffect(() => {
     if (!ref) return;
     (async () => {
@@ -68,40 +88,19 @@ export default function ReceiptByRef() {
           const d = await r.json();
           if (d?.booking) {
             setBooking(d.booking);
-            const raw = normalize(d.booking.status || "awaiting_confirmation");
-            // If the backend says source=temp and status=confirmed, still "awaiting confirmation" in UI
-            const effective =
-              (d.booking.source === "temp" && raw === "confirmed")
-                ? "awaiting_confirmation"
-                : raw;
-            setStatus(effective);
-            return;
-          }
-        }
-        // Fallback: even if we didn't get the full booking, at least check the raw status
-        const s = await fetch(`/api/booking-status?payment_ref=${encodeURIComponent(ref)}`);
-        if (s.ok) {
-          const json = await s.json();
-          if (json?.status) {
-            const next = normalize(json.status);
-            setStatus(next);
-            // If it is already confirmed (i.e., consumed), build a minimal receipt so the user sees success
-            if (statusIsConfirmed(next) && !booking) {
-              setBooking({
-                payment_ref: ref,
-                bookings: [],
-                status: next,
-              });
-            }
+            const raw = norm(d.booking.status || "awaiting_confirmation");
+            setUiStatus(isConsumed(raw) ? "consumed" : "awaiting_confirmation");
+          } else {
+            setUiStatus("awaiting_confirmation");
           }
         }
       } catch {}
     })();
-  }, [ref]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ref]);
 
-  // 2) Poll status until it becomes CONSUMED
+  // 2) Poll ONLY the status endpoint until it becomes "consumed".
   useEffect(() => {
-    if (!ref || isConfirmed) return;
+    if (!ref || isUiConfirmed) return;
     let t;
     const run = async () => {
       try {
@@ -109,13 +108,8 @@ export default function ReceiptByRef() {
         const r = await fetch(`/api/booking-status?payment_ref=${encodeURIComponent(ref)}`);
         if (r.ok) {
           const d = await r.json();
-          if (d?.status) {
-            const next = normalize(d.status);
-            setStatus(next);
-            if (statusIsConfirmed(next) && !booking) {
-              setBooking({ payment_ref: ref, bookings: [], status: next });
-            }
-          }
+          const next = norm(d?.status);
+          setUiStatus(isConsumed(next) ? "consumed" : "awaiting_confirmation");
         }
       } catch {} finally {
         setChecking(false);
@@ -124,22 +118,23 @@ export default function ReceiptByRef() {
     run();
     t = setInterval(run, 10_000);
     return () => clearInterval(t);
-  }, [ref, isConfirmed, booking]);
+  }, [ref, isUiConfirmed]);
 
   const manualRefresh = async () => {
-    if (!ref) return;
     try {
       setChecking(true);
       const r = await fetch(`/api/booking-status?payment_ref=${encodeURIComponent(ref)}`);
       if (r.ok) {
         const d = await r.json();
-        if (d?.status) setStatus(normalize(d.status));
+        const next = norm(d?.status);
+        setUiStatus(isConsumed(next) ? "consumed" : "awaiting_confirmation");
       }
     } catch {} finally {
       setChecking(false);
     }
   };
 
+  /* ------------- UI ------------- */
   if (!ref) {
     return (
       <main className="min-h-screen grid place-items-center">
@@ -148,7 +143,7 @@ export default function ReceiptByRef() {
     );
   }
 
-  if (!booking && !isConfirmed) {
+  if (!booking && !isUiConfirmed) {
     return (
       <div className="min-h-screen grid place-items-center bg-gray-50 p-6">
         <div className="max-w-md w-full bg-white rounded-xl shadow p-6 text-center">
@@ -173,21 +168,21 @@ export default function ReceiptByRef() {
         <div className="text-center mb-6">
           <div
             className={`w-16 h-16 mx-auto mb-2 rounded-full ${
-              isConfirmed ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600"
+              isUiConfirmed ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600"
             } flex items-center justify-center text-3xl`}
           >
-            {isConfirmed ? "✔" : "ℹ"}
+            {isUiConfirmed ? "✔" : "ℹ"}
           </div>
           <h2 className="text-3xl font-extrabold text-blue-800">Awrab Suites Hotels</h2>
           <hr className="mt-2 border-blue-200" />
         </div>
 
         <div className="flex items-center justify-center gap-2 mb-2">
-          <Badge ok={isConfirmed} />
+          <Badge ok={isUiConfirmed} />
         </div>
 
         <h1 className="text-2xl font-bold mb-4 text-blue-700 text-center">
-          {isConfirmed ? "🎉 Booking Confirmed" : "✅ Payment Received — Awaiting Confirmation"}
+          {isUiConfirmed ? "🎉 Booking Confirmed" : "✅ Payment Received — Awaiting Confirmation"}
         </h1>
 
         {(booking?.bookings?.length || 0) > 0 ? (
@@ -204,20 +199,17 @@ export default function ReceiptByRef() {
               </thead>
               <tbody>
                 {booking.bookings?.map((it, i) => {
-                  const roomNo = cleanRoomNo(it.room_number ?? it.room_no ?? it.room);
+                  const tokens = extractRoomTokens(it.room_number ?? it.room_no ?? it.room);
+                  const roomNo = tokens.join(", ") || "-";
                   const roomType = it.room_type ?? parseRoomType(booking.room_type) ?? "-";
                   return (
                     <tr key={i} className="bg-white hover:bg-blue-50">
                       <td className="border border-blue-200 px-3 py-2">{roomNo}</td>
                       <td className="border border-blue-200 px-3 py-2">{roomType}</td>
-                      <td className="border border-blue-200 px-3 py-2">{booking.arrival_date}</td>
-                      <td className="border border-blue-200 px-3 py-2">{booking.departure_date}</td>
+                      <td className="border border-blue-200 px-3 py-2">{booking?.arrival_date || "-"}</td>
+                      <td className="border border-blue-200 px-3 py-2">{booking?.departure_date || "-"}</td>
                       <td className="border border-blue-200 px-3 py-2 capitalize">
-                        {it.status
-                          ? it.status
-                          : isConfirmed
-                          ? "Confirmed"
-                          : "Awaiting confirmation"}
+                        {isUiConfirmed ? "Consumed" : "Awaiting confirmation"}
                       </td>
                     </tr>
                   );
